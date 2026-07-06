@@ -42,6 +42,7 @@ Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt"
 Assert-Contains ".github/workflows/build-extension.yml" 'keiyoushi/extensions-source'
 Assert-Contains ".github/workflows/build-extension.yml" 'actions/setup-java@v4'
 Assert-Contains ".github/workflows/build-extension.yml" ':src:zh:jmapi:assembleRelease'
+Assert-Contains ".github/workflows/build-extension.yml" ':src:zh:jmapi:spotlessApply'
 Assert-Contains ".github/workflows/build-extension.yml" 'index.min.json'
 Assert-Contains ".github/workflows/build-extension.yml" 'repo.json'
 Assert-Contains ".github/workflows/build-extension.yml" '"baseUrl": "http://0\.0\.0\.0:8088"'

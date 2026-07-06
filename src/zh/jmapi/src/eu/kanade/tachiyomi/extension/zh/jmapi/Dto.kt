@@ -78,9 +78,7 @@ data class JmImageDto(
     @SerialName("decode_segments") val decodeSegments: Int = 0,
 )
 
-fun JmAlbumEnvelope.toSManga(baseUrl: String): SManga {
-    return album.toSManga(baseUrl, chapters.firstOrNull()?.photoId)
-}
+fun JmAlbumEnvelope.toSManga(baseUrl: String): SManga = album.toSManga(baseUrl, chapters.firstOrNull()?.photoId)
 
 fun JmAlbumDto.toSManga(baseUrl: String, firstChapterId: String?): SManga {
     val cleanAuthors = author.filter { it.isNotBlank() && it != "N/A" }
@@ -98,28 +96,23 @@ fun JmAlbumDto.toSManga(baseUrl: String, firstChapterId: String?): SManga {
     }
 }
 
-fun JmChapterHeaderDto.toSChapter(albumId: String, albumTitle: String): SChapter {
-    return SChapter.create().apply {
-        url = "/chapter/$albumId/$photoId"
-        name = chapterName(albumTitle)
-        chapter_number = sort.toFloatOrNull() ?: -1f
-        date_upload = UNKNOWN_DATE
-    }
+fun JmChapterHeaderDto.toSChapter(albumId: String, albumTitle: String): SChapter = SChapter.create().apply {
+    url = "/chapter/$albumId/$photoId"
+    name = chapterName(albumTitle)
+    chapter_number = sort.toFloatOrNull() ?: -1f
+    date_upload = UNKNOWN_DATE
 }
 
-private fun JmAlbumDto.buildDescription(): String {
-    return buildList {
-        if (description.isNotBlank()) add(description)
-        add("Views: $totalViews")
-        add("Likes: $likes")
-        add("Comments: $comments")
-        if (chapters > 0) add("Chapters: $chapters")
-    }.joinToString("\n")
-}
+private fun JmAlbumDto.buildDescription(): String = buildList {
+    if (description.isNotBlank()) add(description)
+    add("Views: $totalViews")
+    add("Likes: $likes")
+    add("Comments: $comments")
+    if (chapters > 0) add("Chapters: $chapters")
+}.joinToString("\n")
 
 private fun JmChapterHeaderDto.chapterName(albumTitle: String): String {
     if (title.isNotBlank()) return title
     if (sort == "1" && albumTitle.isNotBlank()) return albumTitle
     return "Chapter $sort"
 }
-

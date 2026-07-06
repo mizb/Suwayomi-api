@@ -22,27 +22,17 @@ abstract class JmApi : HttpSource() {
 
     override val supportsLatest = false
 
-    override fun headersBuilder(): Headers.Builder {
-        return Headers.Builder()
-            .add("User-Agent", System.getProperty("http.agent") ?: DEFAULT_USER_AGENT)
-            .add("Accept", "application/json,image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
-    }
+    override fun headersBuilder(): Headers.Builder = Headers.Builder()
+        .add("User-Agent", System.getProperty("http.agent") ?: DEFAULT_USER_AGENT)
+        .add("Accept", "application/json,image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
 
-    override fun popularMangaRequest(page: Int): Request {
-        return GET("$baseUrl/?health=1", headers)
-    }
+    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/?health=1", headers)
 
-    override fun popularMangaParse(response: Response): MangasPage {
-        return MangasPage(emptyList(), false)
-    }
+    override fun popularMangaParse(response: Response): MangasPage = MangasPage(emptyList(), false)
 
-    override fun latestUpdatesRequest(page: Int): Request {
-        throw UnsupportedOperationException()
-    }
+    override fun latestUpdatesRequest(page: Int): Request = throw UnsupportedOperationException()
 
-    override fun latestUpdatesParse(response: Response): MangasPage {
-        throw UnsupportedOperationException()
-    }
+    override fun latestUpdatesParse(response: Response): MangasPage = throw UnsupportedOperationException()
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
         val jmId = parseJmId(query) ?: throw IOException("Enter a JM ID or album URL")
@@ -64,9 +54,7 @@ abstract class JmApi : HttpSource() {
         return GET(url, headers)
     }
 
-    override fun mangaDetailsParse(response: Response): SManga {
-        return response.parseData<JmAlbumEnvelope>().toSManga(baseUrl)
-    }
+    override fun mangaDetailsParse(response: Response): SManga = response.parseData<JmAlbumEnvelope>().toSManga(baseUrl)
 
     override fun chapterListRequest(manga: SManga): Request {
         val url = baseUrl.toHttpUrl().newBuilder()
@@ -106,32 +94,26 @@ abstract class JmApi : HttpSource() {
         }
     }
 
-    override fun imageUrlParse(response: Response): String {
-        throw UnsupportedOperationException()
-    }
+    override fun imageUrlParse(response: Response): String = throw UnsupportedOperationException()
 
     override fun imageRequest(page: Page): Request {
         val imageUrl = page.imageUrl ?: throw IOException("Missing image URL")
         return GET(imageUrl, headers)
     }
 
-    override fun getMangaUrl(manga: SManga): String {
-        return "$baseUrl/?jmid=${manga.jmId}"
-    }
+    override fun getMangaUrl(manga: SManga): String = "$baseUrl/?jmid=${manga.jmId}"
 
     override fun getChapterUrl(chapter: SChapter): String {
         val (albumId, chapterId) = chapter.jmIds
         return "$baseUrl/?jmid=$albumId&chapter=$chapterId"
     }
 
-    private fun pageImageUrl(albumId: String, chapterId: String, pageNumber: Int): String {
-        return baseUrl.toHttpUrl().newBuilder()
-            .addQueryParameter("jmid", albumId)
-            .addQueryParameter("chapter", chapterId)
-            .addQueryParameter("page", pageNumber.toString())
-            .build()
-            .toString()
-    }
+    private fun pageImageUrl(albumId: String, chapterId: String, pageNumber: Int): String = baseUrl.toHttpUrl().newBuilder()
+        .addQueryParameter("jmid", albumId)
+        .addQueryParameter("chapter", chapterId)
+        .addQueryParameter("page", pageNumber.toString())
+        .build()
+        .toString()
 
     private inline fun <reified T> Response.parseData(): T {
         val payloadText = body.string()
