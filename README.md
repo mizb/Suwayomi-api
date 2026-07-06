@@ -1,4 +1,4 @@
-# JM API Suwayomi Extension
+﻿# JM API Suwayomi Extension
 
 This repository builds a small Tachiyomi/Suwayomi extension APK for your JM PHP API:
 
@@ -12,7 +12,7 @@ This repository builds a small Tachiyomi/Suwayomi extension APK for your JM PHP 
 
 `index.min.json` cannot call a PHP API directly. Suwayomi reads `index.min.json`, downloads an APK, and the APK calls the API. This project builds that APK and generates a complete Suwayomi extension repository:
 
-- `apk/tachiyomi-zh.jmapi-v1.4.4.apk`
+- `apk/tachiyomi-zh.jmapi-v1.4.5.apk`
 - `icon/eu.kanade.tachiyomi.extension.zh.jmapi.png`
 - `index.min.json`
 - `repo.json`
@@ -83,6 +83,8 @@ The extension asks the PHP API for metadata and chapter pages. Page images are l
 http://127.0.0.1:8088/?jmid=350234&chapter=350234&page=1
 ```
 
+The PHP API returns chapters in reading order, but the extension gives Suwayomi chapters newest-first as Tachiyomi/Suwayomi sources expect. This keeps the source list compatible while letting the reader start from the first chronological chapter.
+
 The default API base URL is:
 
 ```text
@@ -112,3 +114,4 @@ This machine does not need Android SDK for the static contract check:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tests\extension-contract.ps1
 ```
+

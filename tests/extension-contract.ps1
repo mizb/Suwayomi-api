@@ -36,7 +36,7 @@ function Assert-NotContains {
 }
 
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'name\s*=\s*"JM API"'
-Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*4'
+Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*5'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'libVersion\s*=\s*"1\.4"'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'baseUrl\s*=\s*"http://127\.0\.0\.1:8088"'
 
@@ -73,6 +73,8 @@ Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.k
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'maybeDisableApiPrefetch'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'if \(isApiPrefetchDisabled\(\)\)'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'imageUrlParse\(response: Response\)'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'sortedByDescending'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'sort\.toFloatOrNull\(\)'
 
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'data class JmAlbumDto'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'val image: String = ""'
@@ -104,11 +106,11 @@ Assert-Contains "README.md" 'http://jmcomic-api:8088'
 Assert-Contains "README.md" 'prefetch=0'
 Assert-Contains "README.md" 'Disable API prefetch'
 Assert-Contains "README.md" 'SIGNING_KEYSTORE_BASE64'
-Assert-Contains "README.md" 'tachiyomi-zh\.jmapi-v1\.4\.4\.apk'
+Assert-Contains "README.md" 'tachiyomi-zh\.jmapi-v1\.4\.5\.apk'
 
 $readme = Get-Content -LiteralPath (Join-Path $root "README.md") -Raw -Encoding UTF8
-if ($readme -match 'tachiyomi-zh\.jmapi-v1\.4\.[123]\.apk') {
-    throw "README contains stale APK version before v1.4.4"
+if ($readme -match 'tachiyomi-zh\.jmapi-v1\.4\.[1234]\.apk') {
+    throw "README contains stale APK version before v1.4.5"
 }
 
 $dto = Get-Content -LiteralPath (Join-Path $root "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt") -Raw -Encoding UTF8

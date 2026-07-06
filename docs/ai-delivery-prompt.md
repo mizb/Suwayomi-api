@@ -39,7 +39,7 @@ Hard constraints:
 - API port remains 8088.
 - Never recommend 0.0.0.0 as a client access URL. It is only a server bind address.
 - Do not change Docker/API behavior unless strictly required for APK integration.
-- If Kotlin extension source changes, bump versionCode from 3 to 4 and update extension tests and README artifact example to v1.4.4.
+- If Kotlin extension source changes, bump versionCode from the current value and update extension tests and README artifact example. Current released target is v1.4.5 / versionCode 5.
 - If only docs/tests change and Kotlin source does not change, do not bump versionCode.
 - Do not reset, revert, or overwrite unrelated user changes.
 - Do not claim completion unless tests/builds were run or you clearly state which tools are missing.
@@ -89,14 +89,15 @@ Important framework instruction:
 Test-driven workflow:
 1. Update D:\jm\jmapi-extension\tests\extension-contract.ps1 first.
 2. Add checks for:
-   - versionCode = 4 after Kotlin source changes.
+   - current versionCode after Kotlin source changes.
    - ConfigurableSource is implemented and getPreferences() is used for source settings.
    - runtime base URL preference.
    - prefetch disable preference and prefetch=0 URL behavior.
    - search filter and all order codes: mr, mv, mp, tf, new.
    - safe chapter URL parser.
    - absence of unchecked parts[1] to parts[2].
-   - README v1.4.4 artifact example.
+   - README current APK artifact example.
+   - chapterListParse returns chapters newest-first for Suwayomi even though the PHP API returns chronological reading order.
    - no recommendation to use 0.0.0.0 as client URL.
 3. Run the test and verify it fails for the expected missing behavior.
 4. Implement minimal code to pass.
@@ -123,7 +124,7 @@ Documentation updates:
   - Correct Docker service URL example: http://jmcomic-api:8088.
   - Correct LAN example.
   - Warning that 0.0.0.0 is not a client URL.
-  - New APK artifact example v1.4.4 if versionCode becomes 4.
+  - New APK artifact example if versionCode changes.
 
 Delivery output must include:
 - Files changed.

@@ -137,9 +137,11 @@ abstract class JmApi :
 
     override fun chapterListParse(response: Response): List<SChapter> {
         val data = response.parseData<JmAlbumEnvelope>()
-        return data.chapters.map { chapter ->
-            chapter.toSChapter(data.album.albumId, data.album.name)
-        }
+        return data.chapters
+            .sortedByDescending { it.sort.toFloatOrNull() ?: -1f }
+            .map { chapter ->
+                chapter.toSChapter(data.album.albumId, data.album.name)
+            }
     }
 
     override fun pageListRequest(chapter: SChapter): Request {
