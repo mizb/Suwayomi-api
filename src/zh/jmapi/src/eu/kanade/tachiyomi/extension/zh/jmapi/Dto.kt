@@ -40,6 +40,15 @@ data class JmChapterEnvelope(
 )
 
 @Serializable
+data class JmListEnvelope(
+    val mode: String = "",
+    val page: Int = 1,
+    val total: Int = 0,
+    @SerialName("has_next_page") val hasNextPage: Boolean = false,
+    val items: List<JmListItemDto> = emptyList(),
+)
+
+@Serializable
 data class JmAlbumDto(
     @SerialName("album_id") val albumId: String,
     val name: String = "",
@@ -52,6 +61,19 @@ data class JmAlbumDto(
     val works: List<String> = emptyList(),
     val actors: List<String> = emptyList(),
     val chapters: Int = 0,
+)
+
+@Serializable
+data class JmListItemDto(
+    val id: String,
+    val name: String = "",
+    val author: String = "",
+    val description: String = "",
+    val image: String = "",
+    val tags: List<String> = emptyList(),
+    val likes: Int = 0,
+    @SerialName("total_views") val totalViews: Int = 0,
+    @SerialName("updated_at") val updatedAt: Long? = null,
 )
 
 @Serializable
@@ -79,6 +101,21 @@ data class JmImageDto(
 )
 
 fun JmAlbumEnvelope.toSManga(baseUrl: String): SManga = album.toSManga(baseUrl, chapters.firstOrNull()?.photoId)
+
+fun JmListItemDto.toSManga(): SManga = SManga.create().apply {
+    url = "/album/$id"
+    title = name.ifBlank { "JM $id" }
+    author = this@toSManga.author
+    genre = tags.joinToString()
+    thumbnail_url = image.takeIf { it.isNotBlank() }
+    description = buildList {
+        if (this@toSManga.description.isNotBlank()) add(this@toSManga.description)
+        if (totalViews > 0) add("Views: $totalViews")
+        if (likes > 0) add("Likes: $likes")
+    }.joinToString("\n")
+    status = SManga.UNKNOWN
+    initialized = true
+}
 
 fun JmAlbumDto.toSManga(baseUrl: String, firstChapterId: String?): SManga {
     val cleanAuthors = author.filter { it.isNotBlank() && it != "N/A" }

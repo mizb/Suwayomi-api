@@ -20,29 +20,56 @@ import java.io.IOException
 @Source
 abstract class JmApi : HttpSource() {
 
-    override val supportsLatest = false
+    override val supportsLatest = true
 
     override fun headersBuilder(): Headers.Builder = Headers.Builder()
         .add("User-Agent", System.getProperty("http.agent") ?: DEFAULT_USER_AGENT)
         .add("Accept", "application/json,image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
 
-    override fun popularMangaRequest(page: Int): Request = GET("$baseUrl/?health=1", headers)
-
-    override fun popularMangaParse(response: Response): MangasPage = MangasPage(emptyList(), false)
-
-    override fun latestUpdatesRequest(page: Int): Request = throw UnsupportedOperationException()
-
-    override fun latestUpdatesParse(response: Response): MangasPage = throw UnsupportedOperationException()
-
-    override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
-        val jmId = parseJmId(query) ?: throw IOException("Enter a JM ID or album URL")
+    override fun popularMangaRequest(page: Int): Request {
         val url = baseUrl.toHttpUrl().newBuilder()
-            .addQueryParameter("jmid", jmId)
+            .addQueryParameter("list", "popular")
+            .addQueryParameter("page", page.toString())
+            .addQueryParameter("format", "min")
             .build()
         return GET(url, headers)
     }
 
+    override fun popularMangaParse(response: Response): MangasPage = response.parseList()
+
+    override fun latestUpdatesRequest(page: Int): Request {
+        val url = baseUrl.toHttpUrl().newBuilder()
+            .addQueryParameter("list", "latest")
+            .addQueryParameter("page", page.toString())
+            .addQueryParameter("format", "min")
+            .build()
+        return GET(url, headers)
+    }
+
+    override fun latestUpdatesParse(response: Response): MangasPage = response.parseList()
+
+    override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
+        val trimmedQuery = query.trim()
+        if (trimmedQuery.isEmpty()) throw IOException("Enter a JM ID, album URL, or title")
+
+        val builder = baseUrl.toHttpUrl().newBuilder()
+            .addQueryParameter("format", "min")
+            .addQueryParameter("page", page.toString())
+
+        val jmId = parseJmId(trimmedQuery)
+        val url = if (jmId != null) {
+            builder.addQueryParameter("jmid", jmId).build()
+        } else {
+            builder.addQueryParameter("search", trimmedQuery).build()
+        }
+        return GET(url, headers)
+    }
+
     override fun searchMangaParse(response: Response): MangasPage {
+        if (response.request.url.queryParameter("search") != null) {
+            return response.parseList()
+        }
+
         val data = response.parseData<JmAlbumEnvelope>()
         return MangasPage(listOf(data.toSManga(baseUrl)), false)
     }
@@ -87,9 +114,11 @@ abstract class JmApi : HttpSource() {
         if (pageCount <= 0) throw IOException("No pages found")
 
         return (1..pageCount).map { pageNumber ->
+            val imageUrl = chapter.images.getOrNull(pageNumber - 1)?.url
             Page(
                 index = pageNumber - 1,
-                imageUrl = pageImageUrl(data.album.albumId, chapter.photoId, pageNumber),
+                imageUrl = imageUrl?.takeIf { it.isNotBlank() }
+                    ?: pageImageUrl(data.album.albumId, chapter.photoId, pageNumber),
             )
         }
     }
@@ -114,6 +143,14 @@ abstract class JmApi : HttpSource() {
         .addQueryParameter("page", pageNumber.toString())
         .build()
         .toString()
+
+    private fun Response.parseList(): MangasPage {
+        val data = parseData<JmListEnvelope>()
+        return MangasPage(
+            data.items.map { it.toSManga() },
+            data.hasNextPage,
+        )
+    }
 
     private inline fun <reified T> Response.parseData(): T {
         val payloadText = body.string()

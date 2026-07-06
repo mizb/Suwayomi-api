@@ -24,11 +24,15 @@ function Assert-Contains {
 }
 
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'name\s*=\s*"JM API"'
-Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*1'
+Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*2'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'libVersion\s*=\s*"1\.4"'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'baseUrl\s*=\s*"http://0\.0\.0\.0:8088"'
 
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'class\s+JmApi\s*:\s*HttpSource'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'supportsLatest\s*=\s*true'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("list", "popular"\)'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("list", "latest"\)'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("search"'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'parseJmId'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" '\?jmid='
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" '&chapter='
@@ -37,7 +41,10 @@ Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.k
 
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'data class JmAlbumDto'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'data class JmChapterDto'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'data class JmListEnvelope'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'data class JmListItemDto'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'fun JmAlbumEnvelope.toSManga'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'fun JmListItemDto.toSManga'
 
 Assert-Contains ".github/workflows/build-extension.yml" 'keiyoushi/extensions-source'
 Assert-Contains ".github/workflows/build-extension.yml" 'actions/setup-java@v4'
