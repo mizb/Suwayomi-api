@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -77,6 +77,10 @@ jobs:
             echo "::warning::SIGNING_KEYSTORE_BASE64 is not set. The APK will use a temporary debug signing key."
           fi
 
+      - name: Normalize Kotlin formatting
+        working-directory: keiyoushi
+        run: ./gradlew :src:zh:jmapi:spotlessApply --stacktrace
+
       - name: Build release APK
         working-directory: keiyoushi
         env:
@@ -125,6 +129,7 @@ jobs:
           mkdir -p dist/apk dist/icon
           cp "${APK_SOURCE}" "dist/apk/${APK_NAME}"
           cp src/zh/jmapi/res/mipmap-xxxhdpi/ic_launcher.png "dist/icon/${PACKAGE_NAME}.png"
+          touch dist/.nojekyll
 
           cat > dist/index.min.json <<EOF
           [
@@ -159,6 +164,7 @@ jobs:
             }
           }
           EOF
+          cp dist/index.min.json dist/index.json
 
           echo "apk-name=${APK_NAME}" >> "${GITHUB_OUTPUT}"
           echo "fingerprint=${FINGERPRINT}" >> "${GITHUB_OUTPUT}"
@@ -179,6 +185,14 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist/
+
+      - name: Publish raw extension repo branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: repo
+          publish_dir: dist
+          force_orphan: true
 
   deploy-pages:
     needs: build
