@@ -12,7 +12,7 @@ This repository builds a small Tachiyomi/Suwayomi extension APK for your JM PHP 
 
 `index.min.json` cannot call a PHP API directly. Suwayomi reads `index.min.json`, downloads an APK, and the APK calls the API. This project builds that APK and generates a complete Suwayomi extension repository:
 
-- `apk/tachiyomi-zh.jmapi-v1.4.3.apk`
+- `apk/tachiyomi-zh.jmapi-v1.4.4.apk`
 - `icon/eu.kanade.tachiyomi.extension.zh.jmapi.png`
 - `index.min.json`
 - `repo.json`
@@ -74,7 +74,8 @@ https://raw.githubusercontent.com/<your-github-username>/<your-repo-name>/repo/i
 1. Add the repo URL above to Suwayomi's extension repositories.
 2. Install `Tachiyomi: JM API`.
 3. Open the source `JM API`.
-4. Browse popular/latest, or search a JM ID/title, for example `350234` or `董卓`.
+4. Open the source settings if needed and set the API base URL.
+5. Browse popular/latest, or search a JM ID/title, for example `350234` or `董卓`.
 
 The extension asks the PHP API for metadata and chapter pages. Page images are loaded from URLs like:
 
@@ -82,7 +83,27 @@ The extension asks the PHP API for metadata and chapter pages. Page images are l
 http://127.0.0.1:8088/?jmid=350234&chapter=350234&page=1
 ```
 
-`0.0.0.0` is only a server listen address. Do not use it as the Suwayomi client address. If Suwayomi runs in Docker with the API service, rebuild this extension with `baseUrl = "http://jmcomic-api:8088"`. If Suwayomi runs on another device, use the API host LAN address, for example `http://192.168.1.20:8088`.
+The default API base URL is:
+
+```text
+http://127.0.0.1:8088
+```
+
+If Suwayomi runs in Docker with the API service, set the extension API base URL to:
+
+```text
+http://jmcomic-api:8088
+```
+
+If Suwayomi runs on another device, use the API host LAN address, for example:
+
+```text
+http://192.168.1.20:8088
+```
+
+`0.0.0.0` is only a server listen address. Do not use it as the Suwayomi client address.
+
+API prefetch is enabled by default. This means image requests do not include `prefetch=0` unless you explicitly change the extension setting. On weak hosts, or when Suwayomi preloads too aggressively, enable `Disable API prefetch` in the source settings. After that, generated API image requests include `prefetch=0`.
 
 ## Local static check
 
