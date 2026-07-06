@@ -61,6 +61,12 @@ https://<your-github-username>.github.io/<your-repo-name>/index.min.json
 
 The workflow also uploads a `suwayomi-repo` artifact containing the generated repository files.
 
+It also publishes the same generated files to the `repo` branch. If GitHub Pages is slow or not enabled, use this raw URL instead:
+
+```text
+https://raw.githubusercontent.com/<your-github-username>/<your-repo-name>/repo/index.min.json
+```
+
 ## Use in Suwayomi
 
 1. Add the repo URL above to Suwayomi's extension repositories.
