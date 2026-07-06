@@ -4,13 +4,13 @@ plugins {
 
 keiyoushi {
     name = "JM API"
-    versionCode = 2
+    versionCode = 4
     contentWarning = ContentWarning.NSFW
     libVersion = "1.4"
 
     source {
         name = "JM API"
         lang = "zh"
-        baseUrl = "http://0.0.0.0:8088"
+        baseUrl = "http://127.0.0.1:8088"
     }
 }

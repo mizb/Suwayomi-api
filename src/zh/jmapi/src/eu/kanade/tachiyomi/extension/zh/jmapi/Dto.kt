@@ -4,6 +4,7 @@ import eu.kanade.tachiyomi.source.model.SChapter
 import eu.kanade.tachiyomi.source.model.SManga
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.io.IOException
 
 private const val UNKNOWN_DATE = 0L
 
@@ -11,10 +12,15 @@ val SManga.jmId: String
     get() = url.substringAfterLast("/")
 
 val SChapter.jmIds: Pair<String, String>
-    get() {
-        val parts = url.trim('/').split('/')
-        return parts[1] to parts[2]
-    }
+    get() = parseChapterIds(url)
+
+private val CHAPTER_URL_REGEX = Regex("""^/?chapter/(\d{1,20})/(\d{1,20})/?$""")
+
+fun parseChapterIds(url: String): Pair<String, String> {
+    val match = CHAPTER_URL_REGEX.matchEntire(url.trim())
+        ?: throw IOException("Invalid JM chapter URL: $url")
+    return match.groupValues[1] to match.groupValues[2]
+}
 
 @Serializable
 data class JmApiResponse<T>(
@@ -52,6 +58,7 @@ data class JmListEnvelope(
 data class JmAlbumDto(
     @SerialName("album_id") val albumId: String,
     val name: String = "",
+    val image: String = "",
     val author: List<String> = emptyList(),
     val description: String = "",
     @SerialName("total_views") val totalViews: String = "0",
@@ -100,7 +107,8 @@ data class JmImageDto(
     @SerialName("decode_segments") val decodeSegments: Int = 0,
 )
 
-fun JmAlbumEnvelope.toSManga(baseUrl: String): SManga = album.toSManga(baseUrl, chapters.firstOrNull()?.photoId)
+@Suppress("UNUSED_PARAMETER")
+fun JmAlbumEnvelope.toSManga(baseUrl: String): SManga = album.toSManga()
 
 fun JmListItemDto.toSManga(): SManga = SManga.create().apply {
     url = "/album/$id"
@@ -117,7 +125,7 @@ fun JmListItemDto.toSManga(): SManga = SManga.create().apply {
     initialized = true
 }
 
-fun JmAlbumDto.toSManga(baseUrl: String, firstChapterId: String?): SManga {
+fun JmAlbumDto.toSManga(): SManga {
     val cleanAuthors = author.filter { it.isNotBlank() && it != "N/A" }
     val allGenres = (tags + works + actors).map { it.trim() }.filter { it.isNotEmpty() }.distinct()
 
@@ -127,7 +135,7 @@ fun JmAlbumDto.toSManga(baseUrl: String, firstChapterId: String?): SManga {
         author = cleanAuthors.joinToString()
         genre = allGenres.joinToString()
         status = SManga.UNKNOWN
-        thumbnail_url = firstChapterId?.let { "$baseUrl/?jmid=$albumId&chapter=$it&page=1" }
+        thumbnail_url = image.takeIf { it.isNotBlank() }
         description = buildDescription()
         initialized = true
     }
