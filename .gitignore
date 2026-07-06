@@ -1,0 +1,10 @@
+.gradle/
+.idea/
+build/
+dist/
+keiyoushi/
+*.apk
+*.jks
+*.keystore
+signingkey.jks.base64
+

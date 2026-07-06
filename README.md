@@ -2,7 +2,7 @@
 
 This repository builds a small Tachiyomi/Suwayomi extension APK for your JM PHP API:
 
-- API base URL: `http://0.0.0.0:8088`
+- API base URL: `http://127.0.0.1:8088`
 - Package: `eu.kanade.tachiyomi.extension.zh.jmapi`
 - Search input: JM ID, `JM350234`, album URL, or `?jmid=350234`
 - Lists: popular and latest updates
@@ -12,7 +12,7 @@ This repository builds a small Tachiyomi/Suwayomi extension APK for your JM PHP 
 
 `index.min.json` cannot call a PHP API directly. Suwayomi reads `index.min.json`, downloads an APK, and the APK calls the API. This project builds that APK and generates a complete Suwayomi extension repository:
 
-- `apk/tachiyomi-zh.jmapi-v1.4.1.apk`
+- `apk/tachiyomi-zh.jmapi-v1.4.3.apk`
 - `icon/eu.kanade.tachiyomi.extension.zh.jmapi.png`
 - `index.min.json`
 - `repo.json`
@@ -79,8 +79,10 @@ https://raw.githubusercontent.com/<your-github-username>/<your-repo-name>/repo/i
 The extension asks the PHP API for metadata and chapter pages. Page images are loaded from URLs like:
 
 ```text
-http://0.0.0.0:8088/?jmid=350234&chapter=350234&page=1
+http://127.0.0.1:8088/?jmid=350234&chapter=350234&page=1
 ```
+
+`0.0.0.0` is only a server listen address. Do not use it as the Suwayomi client address. If Suwayomi runs in Docker with the API service, rebuild this extension with `baseUrl = "http://jmcomic-api:8088"`. If Suwayomi runs on another device, use the API host LAN address, for example `http://192.168.1.20:8088`.
 
 ## Local static check
 
