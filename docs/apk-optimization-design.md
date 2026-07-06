@@ -16,18 +16,18 @@ The API/Docker project is treated as an already optimized backend. APK changes m
 
 ## Implementation Status
 
-Implemented in extension version `1.4.5` / `versionCode = 5`:
+Implemented in extension version `1.4.6` / `versionCode = 6`:
 
 - Runtime API base URL source setting, defaulting to `http://127.0.0.1:8088`.
 - Client-side rejection of `0.0.0.0` as an API base URL.
 - API prefetch disable setting. The default remains prefetch enabled; `prefetch=0` is only added when the user enables the disable switch.
 - Popular/latest lists, title search, JM ID search, search sort filter, safe chapter URL parsing, and clearer API/page error messages.
 - Source preferences use the current Keiyoushi pattern: implement `ConfigurableSource` and read settings through `keiyoushi.utils.getPreferences()`.
-- Chapter lists are returned newest-first to Suwayomi, even though the PHP API returns chronological reading order. This matches Tachiyomi/Suwayomi source expectations and lets the reader start from the first chronological chapter.
+- Chapter lists are returned newest-first to Suwayomi, even though the PHP API returns chronological reading order. The extension generates unique chapter numbers from that reading order so Suwayomi can start from the first chronological chapter, resume saved pages, and find the next chapter even when upstream `sort` values are duplicated.
 
 ## Current APK Behavior
 
-- `versionCode = 5`, `libVersion = "1.4"`.
+- `versionCode = 6`, `libVersion = "1.4"`.
 - `baseUrl` remains compile-time metadata default `http://127.0.0.1:8088`, but runtime requests use the source setting.
 - Popular and latest lists call the PHP API with `list=popular/latest`.
 - Search supports JM ID, album URL, and title query.
@@ -137,7 +137,7 @@ Do not leak secrets or huge response bodies.
 Any Kotlin source change means:
 
 - Bump `versionCode` whenever Kotlin source behavior changes.
-- Current README artifact example is `v1.4.5`.
+- Current README artifact example is `v1.4.6`.
 - Extension contract test must expect the current `versionCode`.
 - Generated `index.min.json` should naturally use the current code and version.
 
@@ -248,7 +248,7 @@ Update the contract test to assert:
 - Page image URL can include `prefetch=0`.
 - Search filter exists and maps to `mr`, `mv`, `mp`, `tf`, `new`.
 - Safe chapter URL parsing exists and old unchecked `parts[1] to parts[2]` is gone.
-- README artifact example is `tachiyomi-zh.jmapi-v1.4.5.apk`.
+- README artifact example is `tachiyomi-zh.jmapi-v1.4.6.apk`.
 
 Required build/runtime checks when tools are available:
 
@@ -265,7 +265,7 @@ On GitHub Actions or a machine with Gradle/Android SDK:
 
 Runtime verification in Suwayomi:
 
-1. Install APK version `1.4.5`.
+1. Install APK version `1.4.6`.
 2. Set API base URL to the reachable API address.
 3. Open popular list.
 4. Open latest list.

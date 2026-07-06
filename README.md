@@ -12,7 +12,7 @@ This repository builds a small Tachiyomi/Suwayomi extension APK for your JM PHP 
 
 `index.min.json` cannot call a PHP API directly. Suwayomi reads `index.min.json`, downloads an APK, and the APK calls the API. This project builds that APK and generates a complete Suwayomi extension repository:
 
-- `apk/tachiyomi-zh.jmapi-v1.4.5.apk`
+- `apk/tachiyomi-zh.jmapi-v1.4.6.apk`
 - `icon/eu.kanade.tachiyomi.extension.zh.jmapi.png`
 - `index.min.json`
 - `repo.json`
@@ -83,7 +83,7 @@ The extension asks the PHP API for metadata and chapter pages. Page images are l
 http://127.0.0.1:8088/?jmid=350234&chapter=350234&page=1
 ```
 
-The PHP API returns chapters in reading order, but the extension gives Suwayomi chapters newest-first as Tachiyomi/Suwayomi sources expect. This keeps the source list compatible while letting the reader start from the first chronological chapter.
+The PHP API returns chapters in reading order, but the extension gives Suwayomi chapters newest-first as Tachiyomi/Suwayomi sources expect. Chapter numbers are generated from the stable reading order instead of trusting duplicate upstream `sort` values. This keeps new books starting from the first chronological chapter, lets Suwayomi resume from its saved page, and preserves the next-chapter chain.
 
 The default API base URL is:
 

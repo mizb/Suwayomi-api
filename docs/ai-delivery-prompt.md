@@ -39,7 +39,7 @@ Hard constraints:
 - API port remains 8088.
 - Never recommend 0.0.0.0 as a client access URL. It is only a server bind address.
 - Do not change Docker/API behavior unless strictly required for APK integration.
-- If Kotlin extension source changes, bump versionCode from the current value and update extension tests and README artifact example. Current released target is v1.4.5 / versionCode 5.
+- If Kotlin extension source changes, bump versionCode from the current value and update extension tests and README artifact example. Current released target is v1.4.6 / versionCode 6.
 - If only docs/tests change and Kotlin source does not change, do not bump versionCode.
 - Do not reset, revert, or overwrite unrelated user changes.
 - Do not claim completion unless tests/builds were run or you clearly state which tools are missing.

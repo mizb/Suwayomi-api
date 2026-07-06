@@ -141,10 +141,14 @@ fun JmAlbumDto.toSManga(): SManga {
     }
 }
 
-fun JmChapterHeaderDto.toSChapter(albumId: String, albumTitle: String): SChapter = SChapter.create().apply {
+fun JmChapterHeaderDto.toSChapter(
+    albumId: String,
+    albumTitle: String,
+    chapterNumber: Float,
+): SChapter = SChapter.create().apply {
     url = "/chapter/$albumId/$photoId"
     name = chapterName(albumTitle)
-    chapter_number = sort.toFloatOrNull() ?: -1f
+    chapter_number = chapterNumber
     date_upload = UNKNOWN_DATE
 }
 

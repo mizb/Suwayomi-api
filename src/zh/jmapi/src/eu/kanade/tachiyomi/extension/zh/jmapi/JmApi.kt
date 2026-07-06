@@ -137,10 +137,15 @@ abstract class JmApi :
 
     override fun chapterListParse(response: Response): List<SChapter> {
         val data = response.parseData<JmAlbumEnvelope>()
-        return data.chapters
-            .sortedByDescending { it.sort.toFloatOrNull() ?: -1f }
-            .map { chapter ->
-                chapter.toSChapter(data.album.albumId, data.album.name)
+        val readingOrder = chapterReadingOrder(data.chapters)
+        return readingOrder
+            .asReversed()
+            .mapIndexed { index, chapter ->
+                chapter.toSChapter(
+                    data.album.albumId,
+                    data.album.name,
+                    (readingOrder.size - index).toFloat(),
+                )
             }
     }
 
@@ -310,3 +315,10 @@ private val SEARCH_SORT_CODES = arrayOf("mr", "mv", "mp", "tf", "new")
 private class SortFilter : Filter.Select<String>("Sort", SEARCH_SORT_LABELS) {
     fun selectedOrder(): String = SEARCH_SORT_CODES.getOrElse(state) { "mr" }
 }
+
+private fun chapterReadingOrder(chapters: List<JmChapterHeaderDto>): List<JmChapterHeaderDto> =
+    chapters.sortedWith(
+        compareBy<JmChapterHeaderDto> { it.sort.toFloatOrNull() ?: Float.MAX_VALUE }
+            .thenBy { it.photoId.toLongOrNull() ?: Long.MAX_VALUE }
+            .thenBy { it.photoId },
+    )
