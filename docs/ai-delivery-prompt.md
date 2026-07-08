@@ -1,4 +1,4 @@
-# AI Delivery Prompt: JM API Suwayomi APK Optimization
+﻿# AI Delivery Prompt: JM API Suwayomi APK Optimization
 
 Use this prompt for a future autonomous coding agent.
 
@@ -39,7 +39,7 @@ Hard constraints:
 - API port remains 8088.
 - Never recommend 0.0.0.0 as a client access URL. It is only a server bind address.
 - Do not change Docker/API behavior unless strictly required for APK integration.
-- If Kotlin extension source changes, bump versionCode from the current value and update extension tests and README artifact example. Current released target is v1.4.6 / versionCode 6.
+- If Kotlin extension source changes, bump versionCode from the current value and update extension tests and README artifact example. Current released target is v1.4.8 / versionCode 8.
 - If only docs/tests change and Kotlin source does not change, do not bump versionCode.
 - Do not reset, revert, or overwrite unrelated user changes.
 - Do not claim completion unless tests/builds were run or you clearly state which tools are missing.
@@ -61,23 +61,28 @@ Required implementation:
    - When disabled, generated decoded image URLs must include prefetch=0.
    - If API-provided image URLs are already decoded API URLs, append prefetch=0 safely without corrupting other URLs.
 
-3. Search sort filters:
+3. Homepage list mapping:
+   - Suwayomi has fixed standard list entry points. Popular must call the PHP API with list=promote so it shows original homepage recommendations.
+   - Latest must call the PHP API with list=weekly so it shows original weekly picks.
+   - Do not silently change these back to list=popular/list=latest unless the user explicitly asks for the older mapping.
+
+4. Search sort filters:
    - Implement getFilterList() and read FilterList in searchMangaRequest.
    - For title search, send order=<code>.
    - Supported codes: mr, mv, mp, tf, new.
    - Default code: mr.
    - If query is a JM ID or album URL, keep current jmid lookup behavior and ignore sort.
 
-4. Safe chapter URL parsing:
+5. Safe chapter URL parsing:
    - Replace unchecked parts[1] to parts[2] parsing.
    - Require /chapter/<albumId>/<photoId> with numeric IDs of 1 to 20 digits.
    - Throw clear IOException or equivalent when invalid.
 
-5. Error messages:
+6. Error messages:
    - Improve user-facing errors for invalid API response, missing chapter, no pages, invalid internal URL, and missing image URL.
    - Keep messages concise and do not leak large response bodies.
 
-6. Optional metadata cache:
+7. Optional metadata cache:
    - Only implement if clean with current HttpSource framework.
    - Max 20 album entries, TTL 60 seconds, memory only.
    - Do not cache image bytes.

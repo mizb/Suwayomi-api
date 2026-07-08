@@ -36,7 +36,7 @@ function Assert-NotContains {
 }
 
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'name\s*=\s*"JM API"'
-Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*6'
+Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*8'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'libVersion\s*=\s*"1\.4"'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'baseUrl\s*=\s*"http://127\.0\.0\.1:8088"'
 
@@ -53,8 +53,9 @@ Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.k
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'normalizeApiBaseUrl'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" '0\.0\.0\.0'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'apiBaseUrl'
-Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("list", "popular"\)'
-Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("list", "latest"\)'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("list", "promote"\)'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("list", "weekly"\)'
+Assert-NotContains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("list", "popular"\)'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("search"'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("order"'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'getFilterList'
@@ -71,6 +72,8 @@ Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.k
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'prefetch=0'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'isApiPrefetchDisabled'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'maybeDisableApiPrefetch'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'isSameApiEndpoint'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'if \(!isSameApiEndpoint\(parsed\)\)'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'if \(isApiPrefetchDisabled\(\)\)'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'imageUrlParse\(response: Response\)'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'sort\.toFloatOrNull\(\)'
@@ -112,11 +115,19 @@ Assert-Contains "README.md" 'http://jmcomic-api:8088'
 Assert-Contains "README.md" 'prefetch=0'
 Assert-Contains "README.md" 'Disable API prefetch'
 Assert-Contains "README.md" 'SIGNING_KEYSTORE_BASE64'
-Assert-Contains "README.md" 'tachiyomi-zh\.jmapi-v1\.4\.6\.apk'
+Assert-Contains "README.md" 'Popular.*original homepage recommendations'
+Assert-Contains "README.md" 'Latest.*original weekly picks'
+Assert-Contains "README.md" 'tachiyomi-zh\.jmapi-v1\.4\.8\.apk'
+Assert-Contains "docs/apk-optimization-design.md" '1\.4\.8'
+Assert-Contains "docs/apk-optimization-design.md" 'versionCode\s*=\s*8'
+Assert-Contains "docs/apk-optimization-design.md" 'Popular.*promote'
+Assert-Contains "docs/apk-optimization-design.md" 'Latest.*weekly'
+Assert-Contains "docs/ai-delivery-prompt.md" 'v1\.4\.8'
+Assert-Contains "docs/ai-delivery-prompt.md" 'versionCode 8'
 
 $readme = Get-Content -LiteralPath (Join-Path $root "README.md") -Raw -Encoding UTF8
-if ($readme -match 'tachiyomi-zh\.jmapi-v1\.4\.[12345]\.apk') {
-    throw "README contains stale APK version before v1.4.6"
+if ($readme -match 'tachiyomi-zh\.jmapi-v1\.4\.[1234567]\.apk') {
+    throw "README contains stale APK version before v1.4.8"
 }
 
 $dto = Get-Content -LiteralPath (Join-Path $root "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt") -Raw -Encoding UTF8

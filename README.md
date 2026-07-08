@@ -5,14 +5,14 @@ This repository builds a small Tachiyomi/Suwayomi extension APK for your JM PHP 
 - API base URL: `http://127.0.0.1:8088`
 - Package: `eu.kanade.tachiyomi.extension.zh.jmapi`
 - Search input: JM ID, `JM350234`, album URL, or `?jmid=350234`
-- Lists: popular and latest updates
+- Lists: Suwayomi Popular maps to original homepage recommendations; Suwayomi Latest maps to original weekly picks
 - Title search: supported through `?search=...`
 
 ## How it works
 
 `index.min.json` cannot call a PHP API directly. Suwayomi reads `index.min.json`, downloads an APK, and the APK calls the API. This project builds that APK and generates a complete Suwayomi extension repository:
 
-- `apk/tachiyomi-zh.jmapi-v1.4.6.apk`
+- `apk/tachiyomi-zh.jmapi-v1.4.8.apk`
 - `icon/eu.kanade.tachiyomi.extension.zh.jmapi.png`
 - `index.min.json`
 - `repo.json`
@@ -75,7 +75,7 @@ https://raw.githubusercontent.com/<your-github-username>/<your-repo-name>/repo/i
 2. Install `Tachiyomi: JM API`.
 3. Open the source `JM API`.
 4. Open the source settings if needed and set the API base URL.
-5. Browse popular/latest, or search a JM ID/title, for example `350234` or `董卓`.
+5. Browse Popular for 首页推荐, Latest for 每周必看, or search a JM ID/title, for example `350234` or `董卓`.
 
 The extension asks the PHP API for metadata and chapter pages. Page images are loaded from URLs like:
 

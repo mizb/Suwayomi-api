@@ -20,6 +20,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import okhttp3.Headers
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
@@ -69,7 +70,7 @@ abstract class JmApi :
 
     override fun popularMangaRequest(page: Int): Request {
         val url = apiBaseUrl().toHttpUrl().newBuilder()
-            .addQueryParameter("list", "popular")
+            .addQueryParameter("list", "promote")
             .addQueryParameter("page", page.toString())
             .addQueryParameter("format", "min")
             .build()
@@ -80,7 +81,7 @@ abstract class JmApi :
 
     override fun latestUpdatesRequest(page: Int): Request {
         val url = apiBaseUrl().toHttpUrl().newBuilder()
-            .addQueryParameter("list", "latest")
+            .addQueryParameter("list", "weekly")
             .addQueryParameter("page", page.toString())
             .addQueryParameter("format", "min")
             .build()
@@ -268,6 +269,8 @@ abstract class JmApi :
         if (!isApiPrefetchDisabled()) return imageUrl
 
         val parsed = imageUrl.toHttpUrlOrNull() ?: return imageUrl
+        if (!isSameApiEndpoint(parsed)) return imageUrl
+
         if (
             parsed.queryParameter("jmid") == null ||
             parsed.queryParameter("chapter") == null ||
@@ -280,6 +283,13 @@ abstract class JmApi :
             .setQueryParameter("prefetch", "0")
             .build()
             .toString()
+    }
+
+    private fun isSameApiEndpoint(url: HttpUrl): Boolean {
+        val apiUrl = apiBaseUrl().toHttpUrlOrNull() ?: return false
+        return url.scheme == apiUrl.scheme &&
+            url.host == apiUrl.host &&
+            url.port == apiUrl.port
     }
 
     companion object {

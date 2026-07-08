@@ -1,4 +1,4 @@
-# JM API Suwayomi APK Optimization Design
+﻿# JM API Suwayomi APK Optimization Design
 
 Date: 2026-07-06
 
@@ -16,20 +16,21 @@ The API/Docker project is treated as an already optimized backend. APK changes m
 
 ## Implementation Status
 
-Implemented in extension version `1.4.6` / `versionCode = 6`:
+Implemented in extension version `1.4.8` / `versionCode = 8`:
 
 - Runtime API base URL source setting, defaulting to `http://127.0.0.1:8088`.
 - Client-side rejection of `0.0.0.0` as an API base URL.
 - API prefetch disable setting. The default remains prefetch enabled; `prefetch=0` is only added when the user enables the disable switch.
-- Popular/latest lists, title search, JM ID search, search sort filter, safe chapter URL parsing, and clearer API/page error messages.
+- Popular maps to PHP API `list=promote` for original homepage recommendations. Latest maps to PHP API `list=weekly` for original weekly picks.
+- Title search, JM ID search, search sort filter, safe chapter URL parsing, and clearer API/page error messages.
 - Source preferences use the current Keiyoushi pattern: implement `ConfigurableSource` and read settings through `keiyoushi.utils.getPreferences()`.
 - Chapter lists are returned newest-first to Suwayomi, even though the PHP API returns chronological reading order. The extension generates unique chapter numbers from that reading order so Suwayomi can start from the first chronological chapter, resume saved pages, and find the next chapter even when upstream `sort` values are duplicated.
 
 ## Current APK Behavior
 
-- `versionCode = 6`, `libVersion = "1.4"`.
+- `versionCode = 8`, `libVersion = "1.4"`.
 - `baseUrl` remains compile-time metadata default `http://127.0.0.1:8088`, but runtime requests use the source setting.
-- Popular and latest lists call the PHP API with `list=popular/latest`.
+- Popular and Latest are Suwayomi's fixed standard entry points: Popular calls the PHP API with `list=promote`; Latest calls `list=weekly`.
 - Search supports JM ID, album URL, and title query.
 - Search exposes sort/order filters for title searches.
 - Page images are loaded from decoded API URLs returned by the API, or generated as `?jmid=...&chapter=...&page=N`.
@@ -137,7 +138,7 @@ Do not leak secrets or huge response bodies.
 Any Kotlin source change means:
 
 - Bump `versionCode` whenever Kotlin source behavior changes.
-- Current README artifact example is `v1.4.6`.
+- Current README artifact example is `v1.4.8`.
 - Extension contract test must expect the current `versionCode`.
 - Generated `index.min.json` should naturally use the current code and version.
 
@@ -248,7 +249,7 @@ Update the contract test to assert:
 - Page image URL can include `prefetch=0`.
 - Search filter exists and maps to `mr`, `mv`, `mp`, `tf`, `new`.
 - Safe chapter URL parsing exists and old unchecked `parts[1] to parts[2]` is gone.
-- README artifact example is `tachiyomi-zh.jmapi-v1.4.6.apk`.
+- README artifact example is `tachiyomi-zh.jmapi-v1.4.8.apk`.
 
 Required build/runtime checks when tools are available:
 
@@ -265,10 +266,10 @@ On GitHub Actions or a machine with Gradle/Android SDK:
 
 Runtime verification in Suwayomi:
 
-1. Install APK version `1.4.6`.
+1. Install APK version `1.4.8`.
 2. Set API base URL to the reachable API address.
-3. Open popular list.
-4. Open latest list.
+3. Open Popular and confirm it shows original homepage recommendations.
+4. Open Latest and confirm it shows original weekly picks.
 5. Search by title.
 6. Search by JM ID.
 7. Open details and chapters.

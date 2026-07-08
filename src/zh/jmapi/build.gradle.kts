@@ -1,10 +1,10 @@
-plugins {
+﻿plugins {
     alias(kei.plugins.extension)
 }
 
 keiyoushi {
     name = "JM API"
-    versionCode = 6
+    versionCode = 8
     contentWarning = ContentWarning.NSFW
     libVersion = "1.4"
 
