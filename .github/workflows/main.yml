@@ -146,7 +146,7 @@ jobs:
                   "name": "JM API",
                   "lang": "zh",
                   "id": "${SOURCE_ID}",
-                  "baseUrl": "http://0.0.0.0:8088"
+                  "baseUrl": "http://127.0.0.1:8088"
                 }
               ]
             }
