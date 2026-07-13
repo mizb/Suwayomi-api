@@ -38,6 +38,7 @@ function Assert-NotContains {
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'name\s*=\s*"JM API"'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*9'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'libVersion\s*=\s*"1\.4"'
+Assert-Contains "src/zh/jmapi/build.gradle.kts" 'import\s+io\.github\.keiyoushi\.gradle\.api\.ContentWarning'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'baseUrl\s*=\s*"http://127\.0\.0\.1:8088"'
 
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'class\s+JmApi\s*:\s*HttpSource'

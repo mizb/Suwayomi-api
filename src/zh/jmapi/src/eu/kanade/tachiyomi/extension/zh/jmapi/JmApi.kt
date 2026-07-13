@@ -103,17 +103,20 @@ abstract class JmApi :
 
         val jmId = parseJmId(trimmedQuery)
         val url = when {
-            trimmedQuery.isEmpty() -> builder
-                .addQueryParameter("list", "popular")
-                .addQueryParameter("order", selectedSort.catalogOrder)
-                .build()
-            jmId != null -> builder
-                .addQueryParameter("jmid", jmId)
-                .build()
-            else -> builder
-                .addQueryParameter("search", trimmedQuery)
-                .addQueryParameter("order", selectedSort.searchOrder)
-                .build()
+            trimmedQuery.isEmpty() ->
+                builder
+                    .addQueryParameter("list", "popular")
+                    .addQueryParameter("order", selectedSort.catalogOrder)
+                    .build()
+            jmId != null ->
+                builder
+                    .addQueryParameter("jmid", jmId)
+                    .build()
+            else ->
+                builder
+                    .addQueryParameter("search", trimmedQuery)
+                    .addQueryParameter("order", selectedSort.searchOrder)
+                    .build()
         }
         return GET(url, headers)
     }
@@ -270,8 +273,7 @@ abstract class JmApi :
         return candidate
     }
 
-    private fun isApiPrefetchDisabled(): Boolean =
-        preferences.getBoolean(DISABLE_API_PREFETCH_PREF, DEFAULT_DISABLE_API_PREFETCH)
+    private fun isApiPrefetchDisabled(): Boolean = preferences.getBoolean(DISABLE_API_PREFETCH_PREF, DEFAULT_DISABLE_API_PREFETCH)
 
     private fun maybeDisableApiPrefetch(imageUrl: String): String {
         if (!isApiPrefetchDisabled()) return imageUrl
@@ -331,16 +333,16 @@ private val SORT_OPTIONS = arrayOf(
     SortOption("Highest likes", "tf", "tf"),
 )
 
-private class SortFilter : Filter.Select<String>(
-    "Sort",
-    SORT_OPTIONS.map(SortOption::label).toTypedArray(),
-) {
+private class SortFilter :
+    Filter.Select<String>(
+        "Sort",
+        SORT_OPTIONS.map(SortOption::label).toTypedArray(),
+    ) {
     fun selectedOption(): SortOption = SORT_OPTIONS.getOrElse(state) { SORT_OPTIONS.first() }
 }
 
-private fun chapterReadingOrder(chapters: List<JmChapterHeaderDto>): List<JmChapterHeaderDto> =
-    chapters.sortedWith(
-        compareBy<JmChapterHeaderDto> { it.sort.toFloatOrNull() ?: Float.MAX_VALUE }
-            .thenBy { it.photoId.toLongOrNull() ?: Long.MAX_VALUE }
-            .thenBy { it.photoId },
-    )
+private fun chapterReadingOrder(chapters: List<JmChapterHeaderDto>): List<JmChapterHeaderDto> = chapters.sortedWith(
+    compareBy<JmChapterHeaderDto> { it.sort.toFloatOrNull() ?: Float.MAX_VALUE }
+        .thenBy { it.photoId.toLongOrNull() ?: Long.MAX_VALUE }
+        .thenBy { it.photoId },
+)
