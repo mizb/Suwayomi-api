@@ -36,7 +36,7 @@ function Assert-NotContains {
 }
 
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'name\s*=\s*"JM API"'
-Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*8'
+Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*9'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'libVersion\s*=\s*"1\.4"'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'baseUrl\s*=\s*"http://127\.0\.0\.1:8088"'
 
@@ -55,16 +55,73 @@ Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.k
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'apiBaseUrl'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("list", "promote"\)'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("list", "weekly"\)'
-Assert-NotContains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("list", "popular"\)'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("list", "popular"\)'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("search"'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("order"'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'getFilterList'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'SortFilter'
-Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" '"mr"'
-Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" '"mv"'
-Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" '"mp"'
-Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" '"tf"'
-Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" '"new"'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'data\s+class\s+SortOption'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'SortOption\("Latest", "new", "mr"\)'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'SortOption\("Most views", "mv", "mv"\)'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'SortOption\("Highest likes", "tf", "tf"\)'
+Assert-NotContains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'Most images'
+Assert-NotContains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'Enter a JM ID, album URL, or title'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'queryParameter\("list"\)'
+
+$jmApiSource = Get-Content -LiteralPath (Join-Path $root "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt") -Raw -Encoding UTF8
+$requestBody = [regex]::Match(
+    $jmApiSource,
+    'override fun searchMangaRequest\([\s\S]*?(?<body>val trimmedQuery[\s\S]*?)\n    override fun searchMangaParse'
+).Groups['body'].Value
+if ([string]::IsNullOrWhiteSpace($requestBody)) {
+    throw 'Could not isolate searchMangaRequest body'
+}
+
+$emptyBranch = [regex]::Match(
+    $requestBody,
+    'trimmedQuery\.isEmpty\(\)\s*->[\s\S]*?(?=\n\s*jmId\s*!=\s*null\s*->)'
+).Value
+$idBranch = [regex]::Match(
+    $requestBody,
+    'jmId\s*!=\s*null\s*->[\s\S]*?(?=\n\s*else\s*->)'
+).Value
+$titleBranch = [regex]::Match(
+    $requestBody,
+    'else\s*->[\s\S]*?\.build\(\)'
+).Value
+
+if ($emptyBranch -notmatch 'addQueryParameter\("list",\s*"popular"\)' -or
+    $emptyBranch -notmatch 'selectedSort\.catalogOrder' -or
+    $emptyBranch -match 'addQueryParameter\("search"') {
+    throw 'Empty query must use list=popular with catalogOrder and no search parameter'
+}
+if ($idBranch -notmatch 'addQueryParameter\("jmid",\s*jmId\)' -or
+    $idBranch -match 'addQueryParameter\("order"') {
+    throw 'JM ID branch must use jmid without an order parameter'
+}
+if ($titleBranch -notmatch 'addQueryParameter\("search",\s*trimmedQuery\)' -or
+    $titleBranch -notmatch 'selectedSort\.searchOrder') {
+    throw 'Title branch must use search with searchOrder'
+}
+
+$parseBody = [regex]::Match(
+    $jmApiSource,
+    'override fun searchMangaParse\([\s\S]*?(?<body>= when \{[\s\S]*?)\n    override fun mangaDetailsRequest'
+).Groups['body'].Value
+if ([string]::IsNullOrWhiteSpace($parseBody)) {
+    throw 'Could not isolate searchMangaParse body'
+}
+foreach ($pattern in @(
+    'queryParameter\("search"\).*parseList\(\)',
+    'queryParameter\("list"\).*parseList\(\)',
+    'queryParameter\("jmid"\)',
+    'parseData<JmAlbumEnvelope>',
+    'Unsupported JM API search response'
+)) {
+    if ($parseBody -notmatch $pattern) {
+        throw "Missing search parser dispatch pattern: $pattern"
+    }
+}
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'parseJmId'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" '\?jmid='
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" '&chapter='
@@ -117,17 +174,17 @@ Assert-Contains "README.md" 'Disable API prefetch'
 Assert-Contains "README.md" 'SIGNING_KEYSTORE_BASE64'
 Assert-Contains "README.md" 'Popular.*original homepage recommendations'
 Assert-Contains "README.md" 'Latest.*original weekly picks'
-Assert-Contains "README.md" 'tachiyomi-zh\.jmapi-v1\.4\.8\.apk'
-Assert-Contains "docs/apk-optimization-design.md" '1\.4\.8'
-Assert-Contains "docs/apk-optimization-design.md" 'versionCode\s*=\s*8'
+Assert-Contains "README.md" 'tachiyomi-zh\.jmapi-v1\.4\.9\.apk'
+Assert-Contains "docs/apk-optimization-design.md" '1\.4\.9'
+Assert-Contains "docs/apk-optimization-design.md" 'versionCode\s*=\s*9'
 Assert-Contains "docs/apk-optimization-design.md" 'Popular.*promote'
 Assert-Contains "docs/apk-optimization-design.md" 'Latest.*weekly'
-Assert-Contains "docs/ai-delivery-prompt.md" 'v1\.4\.8'
-Assert-Contains "docs/ai-delivery-prompt.md" 'versionCode 8'
+Assert-Contains "docs/ai-delivery-prompt.md" 'v1\.4\.9'
+Assert-Contains "docs/ai-delivery-prompt.md" 'versionCode 9'
 
 $readme = Get-Content -LiteralPath (Join-Path $root "README.md") -Raw -Encoding UTF8
-if ($readme -match 'tachiyomi-zh\.jmapi-v1\.4\.[1234567]\.apk') {
-    throw "README contains stale APK version before v1.4.8"
+if ($readme -match 'tachiyomi-zh\.jmapi-v1\.4\.[12345678]\.apk') {
+    throw "README contains stale APK version before v1.4.9"
 }
 
 $dto = Get-Content -LiteralPath (Join-Path $root "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt") -Raw -Encoding UTF8

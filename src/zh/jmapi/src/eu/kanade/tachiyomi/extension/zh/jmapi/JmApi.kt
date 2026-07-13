@@ -92,32 +92,40 @@ abstract class JmApi :
 
     override fun searchMangaRequest(page: Int, query: String, filters: FilterList): Request {
         val trimmedQuery = query.trim()
-        if (trimmedQuery.isEmpty()) throw IOException("Enter a JM ID, album URL, or title")
+        val selectedSort = filters.filterIsInstance<SortFilter>()
+            .firstOrNull()
+            ?.selectedOption()
+            ?: SORT_OPTIONS.first()
 
         val builder = apiBaseUrl().toHttpUrl().newBuilder()
             .addQueryParameter("format", "min")
             .addQueryParameter("page", page.toString())
 
         val jmId = parseJmId(trimmedQuery)
-        val order = filters.filterIsInstance<SortFilter>().firstOrNull()?.selectedOrder() ?: DEFAULT_SEARCH_ORDER
-        val url = if (jmId != null) {
-            builder.addQueryParameter("jmid", jmId).build()
-        } else {
-            builder
+        val url = when {
+            trimmedQuery.isEmpty() -> builder
+                .addQueryParameter("list", "popular")
+                .addQueryParameter("order", selectedSort.catalogOrder)
+                .build()
+            jmId != null -> builder
+                .addQueryParameter("jmid", jmId)
+                .build()
+            else -> builder
                 .addQueryParameter("search", trimmedQuery)
-                .addQueryParameter("order", order)
+                .addQueryParameter("order", selectedSort.searchOrder)
                 .build()
         }
         return GET(url, headers)
     }
 
-    override fun searchMangaParse(response: Response): MangasPage {
-        if (response.request.url.queryParameter("search") != null) {
-            return response.parseList()
+    override fun searchMangaParse(response: Response): MangasPage = when {
+        response.request.url.queryParameter("search") != null -> response.parseList()
+        response.request.url.queryParameter("list") != null -> response.parseList()
+        response.request.url.queryParameter("jmid") != null -> {
+            val data = response.parseData<JmAlbumEnvelope>()
+            MangasPage(listOf(data.toSManga(apiBaseUrl())), false)
         }
-
-        val data = response.parseData<JmAlbumEnvelope>()
-        return MangasPage(listOf(data.toSManga(apiBaseUrl())), false)
+        else -> throw IOException("Unsupported JM API search response")
     }
 
     override fun mangaDetailsRequest(manga: SManga): Request {
@@ -297,7 +305,6 @@ abstract class JmApi :
         private const val DISABLE_API_PREFETCH_PREF = "disable_api_prefetch"
         private const val DEFAULT_API_BASE_URL = "http://127.0.0.1:8088"
         private const val DEFAULT_DISABLE_API_PREFETCH = false
-        private const val DEFAULT_SEARCH_ORDER = "mr"
         private const val DEFAULT_USER_AGENT =
             "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36"
 
@@ -312,18 +319,23 @@ abstract class JmApi :
     }
 }
 
-private val SEARCH_SORT_LABELS = arrayOf(
-    "Default",
-    "Most views",
-    "Most images",
-    "Highest likes",
-    "New",
+private data class SortOption(
+    val label: String,
+    val catalogOrder: String,
+    val searchOrder: String,
 )
 
-private val SEARCH_SORT_CODES = arrayOf("mr", "mv", "mp", "tf", "new")
+private val SORT_OPTIONS = arrayOf(
+    SortOption("Latest", "new", "mr"),
+    SortOption("Most views", "mv", "mv"),
+    SortOption("Highest likes", "tf", "tf"),
+)
 
-private class SortFilter : Filter.Select<String>("Sort", SEARCH_SORT_LABELS) {
-    fun selectedOrder(): String = SEARCH_SORT_CODES.getOrElse(state) { "mr" }
+private class SortFilter : Filter.Select<String>(
+    "Sort",
+    SORT_OPTIONS.map(SortOption::label).toTypedArray(),
+) {
+    fun selectedOption(): SortOption = SORT_OPTIONS.getOrElse(state) { SORT_OPTIONS.first() }
 }
 
 private fun chapterReadingOrder(chapters: List<JmChapterHeaderDto>): List<JmChapterHeaderDto> =

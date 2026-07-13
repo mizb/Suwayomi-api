@@ -8,11 +8,13 @@ This repository builds a small Tachiyomi/Suwayomi extension APK for your JM PHP 
 - Lists: Suwayomi Popular maps to original homepage recommendations; Suwayomi Latest maps to original weekly picks
 - Title search: supported through `?search=...`
 
+Search sorting works with or without a title keyword. An empty keyword browses the full catalog; JM ID or album URL lookup returns the exact album and does not apply sorting.
+
 ## How it works
 
 `index.min.json` cannot call a PHP API directly. Suwayomi reads `index.min.json`, downloads an APK, and the APK calls the API. This project builds that APK and generates a complete Suwayomi extension repository:
 
-- `apk/tachiyomi-zh.jmapi-v1.4.8.apk`
+- `apk/tachiyomi-zh.jmapi-v1.4.9.apk`
 - `icon/eu.kanade.tachiyomi.extension.zh.jmapi.png`
 - `index.min.json`
 - `repo.json`

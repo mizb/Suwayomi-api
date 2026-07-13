@@ -16,7 +16,7 @@ The API/Docker project is treated as an already optimized backend. APK changes m
 
 ## Implementation Status
 
-Implemented in extension version `1.4.8` / `versionCode = 8`:
+Implemented in extension version `1.4.9` / `versionCode = 9`:
 
 - Runtime API base URL source setting, defaulting to `http://127.0.0.1:8088`.
 - Client-side rejection of `0.0.0.0` as an API base URL.
@@ -28,7 +28,7 @@ Implemented in extension version `1.4.8` / `versionCode = 8`:
 
 ## Current APK Behavior
 
-- `versionCode = 8`, `libVersion = "1.4"`.
+- `versionCode = 9`, `libVersion = "1.4"`.
 - `baseUrl` remains compile-time metadata default `http://127.0.0.1:8088`, but runtime requests use the source setting.
 - Popular and Latest are Suwayomi's fixed standard entry points: Popular calls the PHP API with `list=promote`; Latest calls `list=weekly`.
 - Search supports JM ID, album URL, and title query.
@@ -91,23 +91,17 @@ This works for current internal URLs but fails poorly if the URL is corrupted, i
 
 Design response: replace with a checked parser, for example `parseChapterIds(url: String): Pair<String, String>`, requiring exactly `chapter/<albumId>/<photoId>` with numeric IDs. Throw `IOException("Invalid JM chapter URL: ...")` or an equivalent user-readable exception.
 
-### 4. Search lacks sort controls
+### 4. Search and empty-query catalog sorting
 
-API supports order values accepted by `normalizeSearchOrder`: `mr`, `mv`, `mp`, `tf`, `new`. The extension currently ignores `FilterList`.
+The extension exposes three logical choices and maps them separately for catalog and title search:
 
-Design response: add a search sort filter with labels mapped to API order values. Keep default `mr` to avoid changing current search behavior.
+| Label | Empty-query catalog order | Title-search order |
+|---|---|---|
+| Latest | `new` | `mr` |
+| Most views | `mv` | `mv` |
+| Highest likes | `tf` | `tf` |
 
-Recommended filter mapping:
-
-| Label | API order |
-|---|---|
-| Default / latest relevance | `mr` |
-| Most views | `mv` |
-| Most images | `mp` |
-| Highest likes/favorites | `tf` |
-| New | `new` |
-
-The exact labels can be Chinese or concise English, but the order codes must match the PHP API.
+An empty query calls `list=popular`; a title query calls `search`; a JM ID or album URL keeps direct `jmid` lookup and ignores sorting. The PHP search API still accepts its broader legacy order whitelist, but the extension UI intentionally exposes only these three consistent choices.
 
 ### 5. Duplicate detail/chapter metadata requests are not a P0 APK issue
 
@@ -138,7 +132,7 @@ Do not leak secrets or huge response bodies.
 Any Kotlin source change means:
 
 - Bump `versionCode` whenever Kotlin source behavior changes.
-- Current README artifact example is `v1.4.8`.
+- Current README artifact example is `v1.4.9`.
 - Extension contract test must expect the current `versionCode`.
 - Generated `index.min.json` should naturally use the current code and version.
 
@@ -195,13 +189,11 @@ prefetch=0
 
 This must apply both to fallback URLs generated in `pageListParse` and to API-provided image URLs if those URLs are API decoded-page URLs. If the URL is not an API URL, do not modify it.
 
-### Search sort filter
+### Search and catalog sort filter
 
 Implement `getFilterList()` and parse `FilterList` in `searchMangaRequest`.
 
-If the query parses as a JM ID or album URL, ignore sort order and call `jmid=<id>` as today.
-
-If the query is a title search, add:
+If the query is empty, call `list=popular` with the selected catalog order. If the query parses as a JM ID or album URL, ignore sort order and call `jmid=<id>`. If the query is a title search, add:
 
 ```text
 order=<selected code>
@@ -247,9 +239,9 @@ Update the contract test to assert:
 - `0.0.0.0` is rejected or warned against in source/docs.
 - Prefetch disable setting exists.
 - Page image URL can include `prefetch=0`.
-- Search filter exists and maps to `mr`, `mv`, `mp`, `tf`, `new`.
+- Search filter contains Latest, Most views, and Highest likes with catalog/search mappings `new/mr`, `mv/mv`, and `tf/tf`.
 - Safe chapter URL parsing exists and old unchecked `parts[1] to parts[2]` is gone.
-- README artifact example is `tachiyomi-zh.jmapi-v1.4.8.apk`.
+- README artifact example is `tachiyomi-zh.jmapi-v1.4.9.apk`.
 
 Required build/runtime checks when tools are available:
 
@@ -266,7 +258,7 @@ On GitHub Actions or a machine with Gradle/Android SDK:
 
 Runtime verification in Suwayomi:
 
-1. Install APK version `1.4.8`.
+1. Install APK version `1.4.9`.
 2. Set API base URL to the reachable API address.
 3. Open Popular and confirm it shows original homepage recommendations.
 4. Open Latest and confirm it shows original weekly picks.
@@ -282,7 +274,7 @@ Runtime verification in Suwayomi:
 - Read this design before editing code.
 - Update contract tests first and observe them fail.
 - Implement minimal Kotlin changes.
-- Bump `versionCode` to `4`.
+- Current delivered `versionCode` is `9`; bump it again only for a later Kotlin behavior change.
 - Update README generated APK example.
 - Run `extension-contract.ps1`.
 - Build APK if Gradle/Android SDK are available.

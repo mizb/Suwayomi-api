@@ -39,7 +39,7 @@ Hard constraints:
 - API port remains 8088.
 - Never recommend 0.0.0.0 as a client access URL. It is only a server bind address.
 - Do not change Docker/API behavior unless strictly required for APK integration.
-- If Kotlin extension source changes, bump versionCode from the current value and update extension tests and README artifact example. Current released target is v1.4.8 / versionCode 8.
+- If Kotlin extension source changes, bump versionCode from the current value and update extension tests and README artifact example. Current released target is v1.4.9 / versionCode 9.
 - If only docs/tests change and Kotlin source does not change, do not bump versionCode.
 - Do not reset, revert, or overwrite unrelated user changes.
 - Do not claim completion unless tests/builds were run or you clearly state which tools are missing.
@@ -68,9 +68,9 @@ Required implementation:
 
 4. Search sort filters:
    - Implement getFilterList() and read FilterList in searchMangaRequest.
-   - For title search, send order=<code>.
-   - Supported codes: mr, mv, mp, tf, new.
-   - Default code: mr.
+   - Expose exactly Latest, Most views, and Highest likes.
+   - Empty query uses list=popular with catalog orders new, mv, tf.
+   - Title search uses search orders mr, mv, tf.
    - If query is a JM ID or album URL, keep current jmid lookup behavior and ignore sort.
 
 5. Safe chapter URL parsing:
@@ -98,7 +98,8 @@ Test-driven workflow:
    - ConfigurableSource is implemented and getPreferences() is used for source settings.
    - runtime base URL preference.
    - prefetch disable preference and prefetch=0 URL behavior.
-   - search filter and all order codes: mr, mv, mp, tf, new.
+   - three logical sort choices and dual mappings: new/mr, mv/mv, tf/tf.
+   - empty query uses list=popular, title uses search, and JM ID/URL uses jmid without order.
    - safe chapter URL parser.
    - absence of unchecked parts[1] to parts[2].
    - README current APK artifact example.
