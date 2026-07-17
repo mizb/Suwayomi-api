@@ -1,145 +1,135 @@
-﻿# AI Delivery Prompt: JM API Suwayomi APK Optimization
+# AI 自主交付指令：JM API 跨项目性能与扩展修复
 
-Use this prompt for a future autonomous coding agent.
+本文件是后续 AI 的执行边界。提示词只需要求 AI 完整读取并自主执行本文件；主要目标、契约和验收条件都在这里。
+
+当前检查点（2026-07-17）：`v1.4.13 / versionCode 13` 已完成合同、安全用例、Keiyoushi 构建、元数据、签名和 Suwayomi 2.3.2243 实际回归。后续先读取跨项目最终报告并核对哈希；未变化时不得重做已经验证的实现。
+
+## 角色与停止条件
+
+你是自主高级开发代理。必须直接检查代码、测试先行、实现、排错、复测、构建并写交付证据，不能停在分析、建议或半成品阶段。
+
+只有以下情况可以停止：
+
+1. 计划内代码、测试、文档、构建、元数据和交付报告全部完成，并有新鲜证据；或
+2. 已完成所有不依赖外部条件的工作，剩余仅为真实外部阻塞，并给出错误证据和可直接复制的后续命令；或
+3. 发现会改变产品目标或公共契约的重大冲突，必须由用户决策。
+
+普通测试失败、工作量大、上下文变长或工具暂时缺失，都不是停止理由。遇到失败必须定位根因、增加或修正测试、做最小修复并复测。
+
+## 权威路径
+
+- API：`D:\jm\jmcomic-api-main`
+- 扩展：`D:\jm\jmapi-extension`
+- 最终报告：`D:\jm\jmcomic-api-main\docs\performance-delivery-report.md`
+- 跨项目设计：`D:\jm\jmcomic-api-main\docs\superpowers\specs\2026-07-13-cross-project-performance-design.md`
+- 实施计划：`D:\jm\jmcomic-api-main\docs\superpowers\plans\2026-07-13-cross-project-performance-delivery.md`
+- 扩展设计：`D:\jm\jmapi-extension\docs\apk-optimization-design.md`
+- 扩展合同：`D:\jm\jmapi-extension\tests\extension-contract.ps1`
+
+开始前完整读取上述设计、计划和当前实现。只修改 `D:\jm\jmcomic-api-main` 与 `D:\jm\jmapi-extension` 的交付源文件；`D:\jm\keiyoushi` 只作为受检构建工作树使用。保留所有用户无关改动，禁止 reset、checkout、revert 或用旧副本覆盖。
+
+## 当前扩展交付目标
+
+- 目标 APK：`v1.4.13`
+- `versionCode 13`
+- `libVersion = "1.4"`
+- APK 文件：`tachiyomi-zh.jmapi-v1.4.13.apk`
+- 默认 API：`http://127.0.0.1:8088`
+
+若执行时行为版本已经高于此值，只能递增到更高且统一的新版本，不能降级。
+
+## 不可偏离契约
+
+1. Popular 固定为 `list=promote`；Latest 固定为 `list=weekly`。
+2. 空搜索固定为 `list=popular`，排序 `new/mv/tf`；标题搜索为 `search`，排序 `mr/mv/tf`；JM ID/URL 只用 `format=min&jmid=<id>`，不得携带 `page` 或 `order`。
+3. 筛选显示“排序 / 最新 / 最多浏览 / 最多点赞”，不得改变映射。
+4. API JSON、章节阅读顺序和 decoded-page URL 对外结构保持兼容。
+5. APK 只访问 PHP API；不得直连 JM 上游、解码图片、增加图片文件缓存或 Redis 依赖。
+6. API 图片/页面缓存继续使用 APCu；Redis 不作为图片缓存。
+7. 不新增 `/app/cache` 图片卷，不启用未验证的 `/comic_read` 生产路径。
+8. 没有真实 Suwayomi 请求证据不得修改 `initialized`，优先使用 API album cache。
+9. 客户端地址不得使用 `0.0.0.0` 或 `::`。
+10. API 端口保持 `8088`。
+
+## 扩展必须实现并审计
+
+- 中文设置、筛选标题和 DTO 用户文本。
+- `ApiEndpoint(rawPreference, baseUrl, basePath)` 快照；偏好变化立即失效。
+- Base URL 允许反代子路径，拒绝 userinfo/query/fragment/未指定地址。
+- Base URL 未指定主机检查必须先移除绝对 DNS 尾点，拒绝 `0.0.0.0.`、`00.0.0.0.` 等全零形式且不得误拒绝普通域名。
+- 所有请求和展示 URL 使用 `HttpUrl.Builder`。
+- 同源 decoded-page 判断精确比较 scheme/host/port/path segments；不得把 `/api2` 或 `/api/other` 当作 `/api`。
+- 预取偏好只在 `imageRequest()` 最终双向同步：禁用时设置 `prefetch=0`，启用时移除；外部 URL 不改。
+- JM ID 统一为 1～20 位并有尾部数字边界；21 位整体拒绝。
+- 单章响应按 requested chapter 精确选择，禁止使用第一个章节兜底。
+- 旧 album URL 去除尾斜杠后严格解析。
+- 删除 `toSManga(baseUrl: String)` 无效参数，不增加 APK 图片缓存。
+- 构建和元数据脚本必须解析 junction 的最终物理路径；移动、swap、递归清理前重新校验，内部 stage/backup 不得是 reparse point，清理不得跟随链接。
+- 构建隔离结束后必须按原始字节恢复 `settings.gradle.kts`，BOM、编码、换行和调用者环境变量均不得变化。
+- 元数据 `libVersion`、组合版本、APK 名称必须通过数字点号与安全文件名白名单，复制目标必须是 staging `apk` 的直接子项。
+- 元数据发布前必须用 `aapt2 dump badging` 核对 APK manifest 的 package、versionCode、versionName；任一项与 Gradle 不一致或工具缺失都必须在 OutputDir 写入/swap 前失败。
+- 目录发布使用精确的 `[IO.Directory]::Move(source,destination)`；禁止让已出现的 destination 把 source 静默嵌套，move 后校验失败必须安全回滚并明确报告回滚失败。
+
+## 工作方法
+
+对每个未完成项严格执行：
+
+1. 写或确认能证明目标行为的失败测试。
+2. 运行并确认它因目标行为缺失而失败，而不是测试语法或过时断言。
+3. 调查根因，只做一个最小修复。
+4. 运行聚焦测试和全部相关回归。
+5. 复审边界、异常路径、版本和文档一致性。
+6. 保存准确输出摘要；未运行的验证不得写“通过”。
+
+若静态合同和权威设计冲突，以权威设计为准，修正互斥或误报的合同，但不得降低行为要求。PowerShell 5.1 对无 BOM UTF-8 中文源码检查应使用 `\uXXXX` 正则或显式 `-Encoding UTF8`。
+
+## 扩展验证命令
+
+```powershell
+Set-Location D:\jm\jmapi-extension
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\extension-contract.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-with-keiyoushi.ps1
+$apk = Get-ChildItem -Recurse -File D:\jm\keiyoushi\src\zh\jmapi\build\outputs\apk\release\*.apk | Select-Object -First 1
+if ($null -eq $apk) { throw 'assembleRelease APK not found under D:\jm\keiyoushi' }
+& .\scripts\generate-repo-metadata.ps1 -ApkPath $apk.FullName -OutputDir .\dist-local
+Get-Content -Raw .\dist-local\index.min.json | ConvertFrom-Json | Out-Null
+Get-Content -Raw .\dist-local\index.json | ConvertFrom-Json | Out-Null
+Get-Content -Raw .\dist-local\repo.json | ConvertFrom-Json | Out-Null
+```
+
+元数据脚本从项目根目录运行时必须用 `&` 在当前 PowerShell 进程直接调用；不得让仍锁住项目根目录的父 PowerShell 再启动子 PowerShell。外部父目录锁被安全拒绝属于 fail-closed，不得通过放宽句柄共享规则绕过。
+
+必须确认 Spotless、assembleRelease、实际 APK、签名 SHA-256、三个 JSON、APK 名称和版本一致。不得复用旧 APK 充当新鲜构建。
+
+## 跨项目最终验证
+
+先比较最终报告中的源码、APK 和元数据哈希。只有哈希变化时才按影响范围重跑本机验证；哈希未变化时只处理已经具备条件的外部项：
+
+- API、Dockerfile、compose、entrypoint、README 和合同版本统一。
+- compose/README 列出全部性能开关、默认值、0 的语义、风险和回滚命令。
+- 全部静态合同新鲜通过。
+- 可用时执行 Docker build/runtime、fixture 故障注入、Redis 并发、CDN failover、缓存和预取回归。
+- 使用相同条件生成 before/after 性能数据；样本不足不得伪报 p95/p99。
+- Suwayomi 回归已经完成；除非 APK、设置或宿主版本变化，不重复执行。当前证据包括中文筛选/设置、Popular、Latest、标题/ID 搜索、详情、章节、阅读、反代子路径和预取双向切换。
+- 写入 `D:\jm\jmcomic-api-main\docs\performance-delivery-report.md`，包含文件、行为、完整测试摘要、性能数据、部署/回滚命令、未执行项和剩余风险。
+
+当前机器 Docker 不可用，但真实 Suwayomi 已完成。Docker-capable 主机到位后自主执行 compose 多 worker/runtime/fault 验收；真实 BEFORE 或生产密钥未提供时继续保留为有证据的外部阻塞。
+
+## 交付输出
+
+最终只在全部可完成工作收敛后报告：
+
+- 修改文件与关键行为。
+- 新鲜测试、构建、运行验证及精确结果。
+- APK 和仓库元数据绝对路径、版本、哈希/签名指纹。
+- 性能 before/after 数据和测量条件。
+- 部署、升级、回滚命令。
+- 真实外部阻塞与剩余风险。
+
+不要输出模糊的“建议下一步”。能自主执行的下一步必须继续执行。
+
+## 给 AI 的简短启动提示词
 
 ```text
-You are an autonomous senior coding agent working on the same Windows machine as the user.
-
-Goal:
-Fully implement and verify the APK-side JM API / Suwayomi extension optimizations. Do not stop at analysis. Read the code, update tests first, implement, verify, update docs, and provide deployment instructions. Continue until complete unless required external tools are missing.
-
-Project paths:
-- Extension project: D:\jm\jmapi-extension
-- API project for reference only: D:\jm\jm-boom-master\jmcomic-api-main
-- Extension source:
-  - D:\jm\jmapi-extension\src\zh\jmapi\src\eu\kanade\tachiyomi\extension\zh\jmapi\JmApi.kt
-  - D:\jm\jmapi-extension\src\zh\jmapi\src\eu\kanade\tachiyomi\extension\zh\jmapi\Dto.kt
-- Build config:
-  - D:\jm\jmapi-extension\src\zh\jmapi\build.gradle.kts
-- Contract test:
-  - D:\jm\jmapi-extension\tests\extension-contract.ps1
-- Design document:
-  - D:\jm\jmapi-extension\docs\apk-optimization-design.md
-
-Must read first:
-1. D:\jm\jmapi-extension\docs\apk-optimization-design.md
-2. D:\jm\jmapi-extension\src\zh\jmapi\src\eu\kanade\tachiyomi\extension\zh\jmapi\JmApi.kt
-3. D:\jm\jmapi-extension\src\zh\jmapi\src\eu\kanade\tachiyomi\extension\zh\jmapi\Dto.kt
-4. D:\jm\jmapi-extension\src\zh\jmapi\build.gradle.kts
-5. D:\jm\jmapi-extension\tests\extension-contract.ps1
-6. D:\jm\jmapi-extension\.github\workflows\build-extension.yml
-7. D:\jm\jmapi-extension\README.md
-
-Hard constraints:
-- Do not decode JM images inside the APK.
-- Do not add image file cache.
-- Do not add Redis or depend on Redis.
-- Do not call JM upstream directly from the APK; the APK talks to the PHP API only.
-- Do not change the PHP API JSON contract unless you update API and extension tests together.
-- API port remains 8088.
-- Never recommend 0.0.0.0 as a client access URL. It is only a server bind address.
-- Do not change Docker/API behavior unless strictly required for APK integration.
-- If Kotlin extension source changes, bump versionCode from the current value and update extension tests and README artifact example. Current released target is v1.4.9 / versionCode 9.
-- If only docs/tests change and Kotlin source does not change, do not bump versionCode.
-- Do not reset, revert, or overwrite unrelated user changes.
-- Do not claim completion unless tests/builds were run or you clearly state which tools are missing.
-- When adding source settings, implement ConfigurableSource and use keiyoushi.utils.getPreferences() following current Keiyoushi extension examples.
-
-Required implementation:
-1. Runtime API base URL setting:
-   - Add a source preference allowing users to set API base URL.
-   - Default remains http://127.0.0.1:8088.
-   - Normalize by trimming and removing trailing slashes.
-   - Require http or https.
-   - Reject or refuse to use 0.0.0.0 as a client host.
-   - All requests must use the runtime configured base URL, not only the compile-time metadata baseUrl.
-   - Keep generated index metadata baseUrl as the default value unless the build workflow explicitly supports a different configured default.
-
-2. API prefetch control:
-   - Add a setting to disable API-side prefetch.
-   - Default must preserve current behavior: API prefetch enabled.
-   - When disabled, generated decoded image URLs must include prefetch=0.
-   - If API-provided image URLs are already decoded API URLs, append prefetch=0 safely without corrupting other URLs.
-
-3. Homepage list mapping:
-   - Suwayomi has fixed standard list entry points. Popular must call the PHP API with list=promote so it shows original homepage recommendations.
-   - Latest must call the PHP API with list=weekly so it shows original weekly picks.
-   - Do not silently change these back to list=popular/list=latest unless the user explicitly asks for the older mapping.
-
-4. Search sort filters:
-   - Implement getFilterList() and read FilterList in searchMangaRequest.
-   - Expose exactly Latest, Most views, and Highest likes.
-   - Empty query uses list=popular with catalog orders new, mv, tf.
-   - Title search uses search orders mr, mv, tf.
-   - If query is a JM ID or album URL, keep current jmid lookup behavior and ignore sort.
-
-5. Safe chapter URL parsing:
-   - Replace unchecked parts[1] to parts[2] parsing.
-   - Require /chapter/<albumId>/<photoId> with numeric IDs of 1 to 20 digits.
-   - Throw clear IOException or equivalent when invalid.
-
-6. Error messages:
-   - Improve user-facing errors for invalid API response, missing chapter, no pages, invalid internal URL, and missing image URL.
-   - Keep messages concise and do not leak large response bodies.
-
-7. Optional metadata cache:
-   - Only implement if clean with current HttpSource framework.
-   - Max 20 album entries, TTL 60 seconds, memory only.
-   - Do not cache image bytes.
-   - If it is invasive or uncertain, skip and document why.
-
-Important framework instruction:
-- Before implementing source preferences, inspect current Keiyoushi/Tachiyomi extension examples from the checked-out build system or official source used by the workflow. Do not blindly use stale preference API names if the current libVersion expects a different pattern.
-
-Test-driven workflow:
-1. Update D:\jm\jmapi-extension\tests\extension-contract.ps1 first.
-2. Add checks for:
-   - current versionCode after Kotlin source changes.
-   - ConfigurableSource is implemented and getPreferences() is used for source settings.
-   - runtime base URL preference.
-   - prefetch disable preference and prefetch=0 URL behavior.
-   - three logical sort choices and dual mappings: new/mr, mv/mv, tf/tf.
-   - empty query uses list=popular, title uses search, and JM ID/URL uses jmid without order.
-   - safe chapter URL parser.
-   - absence of unchecked parts[1] to parts[2].
-   - README current APK artifact example.
-   - chapterListParse returns chapters newest-first for Suwayomi even though the PHP API returns chronological reading order.
-   - no recommendation to use 0.0.0.0 as client URL.
-3. Run the test and verify it fails for the expected missing behavior.
-4. Implement minimal code to pass.
-5. Re-run all tests.
-
-Required static test:
-powershell -ExecutionPolicy Bypass -File D:\jm\jmapi-extension\tests\extension-contract.ps1
-
-If Gradle/Android SDK is available:
-cd D:\jm\jmapi-extension
-Run the same build path used by GitHub Actions or checkout Keiyoushi as needed and run:
-./gradlew :src:zh:jmapi:assembleRelease --stacktrace
-
-If Docker/API is available for runtime verification:
-- Confirm API health:
-  curl "http://127.0.0.1:8088/?health=1"
-- Confirm diagnostics.app_version exists.
-- In Suwayomi, install the new APK, set base URL, test popular, latest, title search, ID search, details, chapters, and images.
-- Toggle "Disable API prefetch" and confirm image requests include prefetch=0.
-
-Documentation updates:
-- Update D:\jm\jmapi-extension\README.md with:
-  - How to change API base URL in extension settings.
-  - Correct Docker service URL example: http://jmcomic-api:8088.
-  - Correct LAN example.
-  - Warning that 0.0.0.0 is not a client URL.
-  - New APK artifact example if versionCode changes.
-
-Delivery output must include:
-- Files changed.
-- What was implemented.
-- Tests run and exact pass/fail status.
-- Build/runtime verification status.
-- How to rebuild and publish the APK/GitHub Pages repo.
-- Whether Docker API must be redeployed.
-- Remaining risks.
-
-Do not end with a vague proposal. Implement and verify end to end within available tools.
+完整读取并严格执行 D:\jm\jmapi-extension\docs\ai-delivery-prompt.md；先核对跨项目最终报告哈希，未变化时不要重做已验证的 v1.4.13 和 Suwayomi 回归，只自主完成已具备条件的外部验收并更新报告。失败必须根因诊断、最小修复、全量复测；不得改变固定筛选/API/章节/缓存契约，不得伪造 Git、BEFORE 或性能百分比。
 ```

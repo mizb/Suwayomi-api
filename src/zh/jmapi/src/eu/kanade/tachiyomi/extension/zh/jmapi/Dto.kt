@@ -9,12 +9,18 @@ import java.io.IOException
 private const val UNKNOWN_DATE = 0L
 
 val SManga.jmId: String
-    get() = url.substringAfterLast("/")
+    get() {
+        val normalized = url.trim().trimEnd('/')
+        val id = normalized.substringAfterLast('/')
+        if (!JM_ID_REGEX.matches(id)) throw IOException("Invalid JM album URL: $url")
+        return id
+    }
 
 val SChapter.jmIds: Pair<String, String>
     get() = parseChapterIds(url)
 
 private val CHAPTER_URL_REGEX = Regex("""^/?chapter/(\d{1,20})/(\d{1,20})/?$""")
+private val JM_ID_REGEX = Regex("""\d{1,20}""")
 
 fun parseChapterIds(url: String): Pair<String, String> {
     val match = CHAPTER_URL_REGEX.matchEntire(url.trim())
@@ -107,8 +113,7 @@ data class JmImageDto(
     @SerialName("decode_segments") val decodeSegments: Int = 0,
 )
 
-@Suppress("UNUSED_PARAMETER")
-fun JmAlbumEnvelope.toSManga(baseUrl: String): SManga = album.toSManga()
+fun JmAlbumEnvelope.toSManga(): SManga = album.toSManga()
 
 fun JmListItemDto.toSManga(): SManga = SManga.create().apply {
     url = "/album/$id"
@@ -118,8 +123,8 @@ fun JmListItemDto.toSManga(): SManga = SManga.create().apply {
     thumbnail_url = image.takeIf { it.isNotBlank() }
     description = buildList {
         if (this@toSManga.description.isNotBlank()) add(this@toSManga.description)
-        if (totalViews > 0) add("Views: $totalViews")
-        if (likes > 0) add("Likes: $likes")
+        if (totalViews > 0) add("浏览：$totalViews")
+        if (likes > 0) add("点赞：$likes")
     }.joinToString("\n")
     status = SManga.UNKNOWN
     initialized = true
@@ -154,14 +159,14 @@ fun JmChapterHeaderDto.toSChapter(
 
 private fun JmAlbumDto.buildDescription(): String = buildList {
     if (description.isNotBlank()) add(description)
-    add("Views: $totalViews")
-    add("Likes: $likes")
-    add("Comments: $comments")
-    if (chapters > 0) add("Chapters: $chapters")
+    add("浏览：$totalViews")
+    add("点赞：$likes")
+    add("评论：$comments")
+    if (chapters > 0) add("章节：$chapters")
 }.joinToString("\n")
 
 private fun JmChapterHeaderDto.chapterName(albumTitle: String): String {
     if (title.isNotBlank()) return title
     if (sort == "1" && albumTitle.isNotBlank()) return albumTitle
-    return "Chapter $sort"
+    return "第 $sort 章"
 }

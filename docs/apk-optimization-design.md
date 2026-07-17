@@ -1,295 +1,181 @@
-﻿# JM API Suwayomi APK Optimization Design
+# JM API Suwayomi 扩展深化设计与交付基线
 
-Date: 2026-07-06
+日期：2026-07-17  
+状态：扩展端实现、静态/安全合同、真实构建、仓库元数据和 Suwayomi 2.3.2243 实际回归均已完成；结果汇总见 `D:\jm\jmcomic-api-main\docs\performance-delivery-report.md`。
 
-## Scope
+## 1. 项目与版本
 
-This document designs the next APK-side optimization pass for:
+- 扩展项目：`D:\jm\jmapi-extension`
+- API 项目：`D:\jm\jmcomic-api-main`
+- Kotlin 主文件：`D:\jm\jmapi-extension\src\zh\jmapi\src\eu\kanade\tachiyomi\extension\zh\jmapi\JmApi.kt`
+- DTO：`D:\jm\jmapi-extension\src\zh\jmapi\src\eu\kanade\tachiyomi\extension\zh\jmapi\Dto.kt`
+- 当前目标版本：`1.4.13`
+- 构建配置：`versionCode = 13`、`libVersion = "1.4"`
+- 目标 APK：`tachiyomi-zh.jmapi-v1.4.13.apk`
 
-- Extension project: `D:\jm\jmapi-extension`
-- Main source: `D:\jm\jmapi-extension\src\zh\jmapi\src\eu\kanade\tachiyomi\extension\zh\jmapi\JmApi.kt`
-- DTO/source helpers: `D:\jm\jmapi-extension\src\zh\jmapi\src\eu\kanade\tachiyomi\extension\zh\jmapi\Dto.kt`
-- Build config: `D:\jm\jmapi-extension\src\zh\jmapi\build.gradle.kts`
-- Contract test: `D:\jm\jmapi-extension\tests\extension-contract.ps1`
+扩展只访问 PHP API，不直接访问 JM 上游。API 端口保持 `8088`。
 
-The API/Docker project is treated as an already optimized backend. APK changes must not reimplement image decoding, image caching, or JM upstream access.
+## 2. 不可破坏契约
 
-## Implementation Status
+- Popular 必须映射为 `list=promote`，展示原站首页推荐。
+- Latest 必须映射为 `list=weekly`，展示原站每周精选。
+- 空搜索使用 `list=popular`；标题搜索使用 `search=<query>`；JM ID/URL 使用 `jmid=<id>`。
+- 筛选值固定为“最新 / 最多浏览 / 最多点赞”。空搜索映射为 `new/mv/tf`，标题搜索映射为 `mr/mv/tf`。
+- JM ID/URL 分支必须只使用 `format=min&jmid=<id>`，不得附带 `page` 或 `order`；分页只属于空搜索列表和标题搜索。
+- PHP API JSON、章节阅读顺序、图片 URL 契约保持兼容。
+- 不在 APK 中解码或缓存图片字节，不引入文件缓存或 Redis，不直连 JM 上游。
+- 没有真实 Suwayomi 请求证据时不得修改 `initialized`。
 
-Implemented in extension version `1.4.9` / `versionCode = 9`:
+## 3. 当前实现设计
 
-- Runtime API base URL source setting, defaulting to `http://127.0.0.1:8088`.
-- Client-side rejection of `0.0.0.0` as an API base URL.
-- API prefetch disable setting. The default remains prefetch enabled; `prefetch=0` is only added when the user enables the disable switch.
-- Popular maps to PHP API `list=promote` for original homepage recommendations. Latest maps to PHP API `list=weekly` for original weekly picks.
-- Title search, JM ID search, search sort filter, safe chapter URL parsing, and clearer API/page error messages.
-- Source preferences use the current Keiyoushi pattern: implement `ConfigurableSource` and read settings through `keiyoushi.utils.getPreferences()`.
-- Chapter lists are returned newest-first to Suwayomi, even though the PHP API returns chronological reading order. The extension generates unique chapter numbers from that reading order so Suwayomi can start from the first chronological chapter, resume saved pages, and find the next chapter even when upstream `sort` values are duplicated.
+### 3.1 中文化
 
-## Current APK Behavior
+用户可见内容统一为中文：
 
-- `versionCode = 9`, `libVersion = "1.4"`.
-- `baseUrl` remains compile-time metadata default `http://127.0.0.1:8088`, but runtime requests use the source setting.
-- Popular and Latest are Suwayomi's fixed standard entry points: Popular calls the PHP API with `list=promote`; Latest calls `list=weekly`.
-- Search supports JM ID, album URL, and title query.
-- Search exposes sort/order filters for title searches.
-- Page images are loaded from decoded API URLs returned by the API, or generated as `?jmid=...&chapter=...&page=N`.
-- The extension exposes a user setting to disable API prefetch; it is off by default, so API prefetch is enabled by default.
-- `SChapter.jmIds` uses checked parsing for `/chapter/<albumId>/<photoId>`.
+- 筛选标题：“排序”
+- 设置标题：“JM API 地址”“禁用 API 预取”
+- DTO 文本：“浏览 / 点赞 / 评论 / 章节 / 第…章”
 
-## Goals
+只翻译显示文本，不改变筛选值和请求映射。
 
-1. Let users change the API base URL without rebuilding the APK.
-2. Let users disable API-side image prefetch from the APK when their host is weak or Suwayomi already preloads aggressively.
-3. Add search sort options while preserving the existing default search behavior.
-4. Harden internal URL parsing so bad chapter URLs fail with a clear error.
-5. Improve user-facing error messages enough to diagnose unreachable API, empty pages, and invalid API JSON.
-6. Keep the generated Suwayomi repository compatible with the current `index.min.json` contract.
-7. Update versioning and tests whenever extension source changes.
+### 3.2 Base URL 快照
 
-## Non-Goals
-
-- Do not decode JM images in the APK.
-- Do not add image file cache in the APK.
-- Do not call JM upstream directly from the APK.
-- Do not use Redis.
-- Do not recommend `0.0.0.0` as a client access address.
-- Do not change the PHP API JSON contract unless the API and extension tests are updated together.
-- Do not change Docker/API port semantics; API remains on `8088`.
-
-## Bug And Logic Review
-
-### 1. Fixed `baseUrl` is the largest APK usability issue
-
-`http://127.0.0.1:8088` only works when Suwayomi and the API are reachable through the same loopback namespace. It fails when:
-
-- Suwayomi runs in Docker and API is another service.
-- Suwayomi runs on another machine.
-- The user wants to route through LAN IP or reverse proxy.
-
-Design response: add a source preference for API base URL. The compile-time `baseUrl` remains the default metadata value, but all runtime requests use the normalized preference value.
-
-### 2. API prefetch can duplicate Suwayomi/client preloading
-
-The API defaults to prefetching `N+1` through `N+10`. This is useful for single-reader latency, but can saturate a weak Docker host when Suwayomi also preloads images.
-
-Design response: add an APK setting such as "Disable API prefetch". When enabled, every page image URL generated by the extension includes `prefetch=0`. Default remains prefetch enabled to preserve current behavior.
-
-### 3. Chapter URL parsing is brittle
-
-Current helper:
+运行时地址使用不可变 `ApiEndpoint`：
 
 ```kotlin
-val SChapter.jmIds: Pair<String, String>
-    get() {
-        val parts = url.trim('/').split('/')
-        return parts[1] to parts[2]
-    }
+private data class ApiEndpoint(
+    val rawPreference: String,
+    val baseUrl: HttpUrl,
+    val basePath: String,
+)
 ```
 
-This works for current internal URLs but fails poorly if the URL is corrupted, imported, or changed in a future refactor.
+读取规则：
 
-Design response: replace with a checked parser, for example `parseChapterIds(url: String): Pair<String, String>`, requiring exactly `chapter/<albumId>/<photoId>` with numeric IDs. Throw `IOException("Invalid JM chapter URL: ...")` or an equivalent user-readable exception.
+1. 原始偏好和缓存一致时复用快照。
+2. 偏好变化时立即重新解析、校验并替换缓存，不能永久 `lazy`。
+3. 允许根路径和反向代理子路径。
+4. 拒绝 userinfo、query、fragment、`0.0.0.0` 和 IPv6 未指定地址 `::`；安全检查先移除绝对 DNS 尾点，因此 `0.0.0.0.`、`00.0.0.0.` 等全零形式也必须拒绝，但普通域名尾点不受影响。
+5. 所有请求和展示 URL 统一使用 `HttpUrl.Builder`，禁止字符串拼接。
 
-### 4. Search and empty-query catalog sorting
+同源判断必须精确比较 scheme、host、port 和规范化 path segments。`/api` 与 `/api/` 等价，但不能匹配 `/api2` 或 `/api/other`。
 
-The extension exposes three logical choices and maps them separately for catalog and title search:
+### 3.3 预取开关双向生效
 
-| Label | Empty-query catalog order | Title-search order |
-|---|---|---|
-| Latest | `new` | `mr` |
-| Most views | `mv` | `mv` |
-| Highest likes | `tf` | `tf` |
+最终状态以 `imageRequest()` 发出请求时的当前偏好为准：
 
-An empty query calls `list=popular`; a title query calls `search`; a JM ID or album URL keeps direct `jmid` lookup and ignores sorting. The PHP search API still accepts its broader legacy order whitelist, but the extension UI intentionally exposes only these three consistent choices.
+- 开启“禁用 API 预取”时，对同一 API decoded-page URL 设置 `prefetch=0`。
+- 关闭该设置时移除全部旧 `prefetch` 参数。
+- 已经加载到内存的章节 URL 也必须随当前设置改变。
+- 外部 CDN、同主机其他 base path、非 decoded-page URL 不得改写。
 
-### 5. Duplicate detail/chapter metadata requests are not a P0 APK issue
+这解决了旧实现把 `prefetch=0` 固化在 `Page.imageUrl` 后无法重新启用预取的问题。
 
-`mangaDetailsRequest` and `chapterListRequest` both call `?jmid=<id>`. This can duplicate metadata requests during normal Suwayomi flows.
+### 3.4 ID 与章节匹配
 
-Reasonability check:
+- 所有 JM ID 均限制为 1～20 位数字。
+- `JM` 前缀正则使用尾部数字边界，21 位 ID 必须整体拒绝，不能截取前 20 位。
+- 旧库 album URL 先去除尾斜杠，再提取和校验 ID。
+- `pageListParse()` 必须按请求 URL 中的 chapter ID 精确选择 `photoId`；找不到时抛出包含 requested ID 的明确错误，禁止静默使用第一个章节。
 
-- The API already has memory caching and Docker-side optimizations.
-- Tachiyomi/Suwayomi `HttpSource` parse methods are response-driven; avoiding the second request cleanly may require overriding deeper fetch behavior or adding a response-body cache.
-- A naive APK cache can become stale or hard to validate.
+### 3.5 URL 构造范围
 
-Design response: do not make this a first-pass requirement. If implemented later, use a tiny in-memory TTL cache keyed by normalized base URL and album ID, max 20 entries, TTL 60 seconds, and only if it can be tested without bypassing expected `HttpSource` behavior.
+以下路径全部从规范化 `HttpUrl` 构建：
 
-### 6. Error text can be clearer
+- Popular、Latest、空搜索、标题搜索、JM ID 搜索
+- 详情、章节列表、页面列表
+- decoded page fallback
+- `getMangaUrl()`、`getChapterUrl()`
 
-Current errors like `Chapter not found`, `No pages found`, and `Invalid JM API response` are usable but not enough for deployment troubleshooting.
+参数通过 `addQueryParameter`、`setQueryParameter` 和 `removeAllQueryParameters` 管理，避免反代子路径、转义字符或已有 query 被字符串拼接破坏。
 
-Design response: include endpoint context where practical:
+### 3.6 DTO 与请求次数
 
-- API unreachable / non-JSON response: mention base URL.
-- No chapters/pages: mention JM ID or chapter ID when available.
-- Invalid internal URL: mention the bad internal URL shape.
+`JmAlbumEnvelope.toSManga()` 不再接收未使用的 Base URL 参数，避免一次无意义的偏好读取和 URL 解析。
 
-Do not leak secrets or huge response bodies.
+真实 Suwayomi 请求计数已经取得：首次详情与刷新各产生 1 个 `?jmid`，10 路并发详情产生 10 个宿主动作对应的请求，章节列表产生 1 个请求。该结果没有证明 APK 元数据缓存的生命周期风险值得承担；继续由服务端短 TTL album cache 去重上游，不增加 APK 元数据缓存，也不把 `initialized` 当作盲目的性能开关。
 
-### 7. Versioning must be explicit
+## 4. 风险与防护
 
-Any Kotlin source change means:
+| 风险 | 防护 |
+|---|---|
+| 反代 `/api` URL 误改写 `/api2` | path segments 精确相等后再检查 jmid/chapter/page |
+| 用户切回启用预取但旧 URL 仍含 `prefetch=0` | 在 `imageRequest()` 双向增删参数 |
+| 21 位 ID 被截成 20 位 | `{1,20}` 后增加 `(?!\d)`，完整输入使用 `matchEntire` |
+| API 返回其他章节 | 按 requested chapter 精确查找并失败关闭 |
+| 设置修改后继续使用旧地址 | 缓存记录 raw preference，变化即失效 |
+| 非法 Base URL 造成凭据泄漏或错误请求 | 拒绝 userinfo/query/fragment/未指定地址 |
+| junction/符号链接绕过源树、输出树边界 | 使用 Win32 最终物理路径解析已存在祖先和未存在尾段，所有移动、swap、删除前重新校验 |
+| 构建隔离改写 Keiyoushi 配置字节 | `settings.gradle.kts` 以原始字节备份并在成功、失败路径中 `WriteAllBytes` 恢复，保留 BOM、编码和换行 |
+| `libVersion` 注入路径分隔或 `..` | `libVersion`、组合版本和 APK 名称使用数字点号/文件名白名单，并验证 APK 目标是 staging `apk` 的直接子项 |
+| APK 重复服务端缓存逻辑 | 禁止 APK 图片缓存，album cache 优先留在 API |
 
-- Bump `versionCode` whenever Kotlin source behavior changes.
-- Current README artifact example is `v1.4.9`.
-- Extension contract test must expect the current `versionCode`.
-- Generated `index.min.json` should naturally use the current code and version.
+## 5. 测试与构建
 
-Do not bump versionCode for docs-only changes.
-
-## Proposed Architecture
-
-### Runtime base URL
-
-Add a helper in `JmApi.kt`:
-
-- `defaultBaseUrl`: the compile-time `baseUrl`.
-- `apiBaseUrl`: reads user preference, normalizes it, falls back to default.
-- `normalizeBaseUrl(raw: String)`: trim whitespace, remove trailing `/`, reject empty values, reject `0.0.0.0` as host, require `http` or `https`.
-
-All request builders should use `apiBaseUrl.toHttpUrl().newBuilder()` instead of `baseUrl.toHttpUrl().newBuilder()`.
-
-`getMangaUrl` and `getChapterUrl` should use `apiBaseUrl`, not the compile-time metadata URL.
-
-### Preferences
-
-Add a source preference screen using the current Keiyoushi/Tachiyomi extension API. The implementer must inspect current examples from `keiyoushi/extensions-source` during build setup instead of guessing stale preference API names.
-
-For `libVersion = "1.4"`, the source must implement `ConfigurableSource` and use `getPreferences()` to access source settings. Otherwise `setupPreferenceScreen`/`preferences` can fail at compile time.
-
-Required preferences:
-
-- API base URL text preference.
-- Disable API prefetch switch preference.
-
-Default values:
-
-- API base URL: `http://127.0.0.1:8088`.
-- Disable API prefetch: `false`.
-
-Validation:
-
-- Do not save or use `http://0.0.0.0:8088` as a client URL.
-- If invalid, continue using default and show a clear error on requests, or sanitize before use depending on what the extension framework allows.
-
-### Prefetch toggle
-
-Add a helper:
-
-```kotlin
-private fun pageImageUrl(albumId: String, chapterId: String, pageNumber: Int): String
-```
-
-When "Disable API prefetch" is enabled, append:
-
-```text
-prefetch=0
-```
-
-This must apply both to fallback URLs generated in `pageListParse` and to API-provided image URLs if those URLs are API decoded-page URLs. If the URL is not an API URL, do not modify it.
-
-### Search and catalog sort filter
-
-Implement `getFilterList()` and parse `FilterList` in `searchMangaRequest`.
-
-If the query is empty, call `list=popular` with the selected catalog order. If the query parses as a JM ID or album URL, ignore sort order and call `jmid=<id>`. If the query is a title search, add:
-
-```text
-order=<selected code>
-```
-
-The API accepts both `order` and `o`, but use `order` for readability.
-
-### Safe URL parsing
-
-Replace extension property `SChapter.jmIds` with a checked function or safer property.
-
-Acceptance behavior:
-
-- `/chapter/350234/350234` returns `350234` and `350234`.
-- Invalid shapes throw a clear exception.
-- Numeric constraints should match API expectations: 1 to 20 digits.
-
-### Optional small metadata cache
-
-Only implement if straightforward after inspecting the framework:
-
-- Key: normalized API base URL + album ID.
-- Value: `JmAlbumEnvelope`.
-- TTL: 60 seconds.
-- Max entries: 20.
-- Do not cache image bytes.
-- Do not persist to disk.
-
-If the cache would require invasive overrides or test-hostile behavior, skip it and document why.
-
-## Test Plan
-
-Required static tests:
+### 5.1 静态合同
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File D:\jm\jmapi-extension\tests\extension-contract.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File D:\jm\jmapi-extension\tests\extension-contract.ps1
 ```
 
-Update the contract test to assert:
+合同必须覆盖中文化、映射、ID 边界、URL Builder、反代 path、预取双向同步、requested chapter、版本、文档、构建脚本和仓库元数据脚本。
 
-- current `versionCode` after Kotlin source changes.
-- Runtime base URL preference exists.
-- `0.0.0.0` is rejected or warned against in source/docs.
-- Prefetch disable setting exists.
-- Page image URL can include `prefetch=0`.
-- Search filter contains Latest, Most views, and Highest likes with catalog/search mappings `new/mr`, `mv/mv`, and `tf/tf`.
-- Safe chapter URL parsing exists and old unchecked `parts[1] to parts[2]` is gone.
-- README artifact example is `tachiyomi-zh.jmapi-v1.4.9.apk`.
-
-Required build/runtime checks when tools are available:
+### 5.2 Keiyoushi 构建
 
 ```powershell
-cd D:\jm\jmapi-extension
-powershell -ExecutionPolicy Bypass -File .\tests\extension-contract.ps1
+Set-Location D:\jm\jmapi-extension
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-with-keiyoushi.ps1
 ```
 
-On GitHub Actions or a machine with Gradle/Android SDK:
+脚本固定使用 `D:\jm\keiyoushi`，复制前验证目标绝对路径，只加载 `zh/jmapi`，依次运行：
 
-```bash
-./gradlew :src:zh:jmapi:assembleRelease --stacktrace
+```text
+:src:zh:jmapi:spotlessApply
+:src:zh:jmapi:assembleRelease
 ```
 
-Runtime verification in Suwayomi:
+任一步非零退出都必须失败，不得沿用旧 APK 冒充新构建。
 
-1. Install APK version `1.4.9`.
-2. Set API base URL to the reachable API address.
-3. Open Popular and confirm it shows original homepage recommendations.
-4. Open Latest and confirm it shows original weekly picks.
-5. Search by title.
-6. Search by JM ID.
-7. Open details and chapters.
-8. Open image page 1.
-9. Enable "Disable API prefetch" and confirm generated image requests include `prefetch=0`.
-10. Confirm `0.0.0.0` is not used as a client URL.
+### 5.3 仓库元数据
 
-## Delivery Checklist
+```powershell
+$apk = Get-ChildItem -Recurse -File D:\jm\keiyoushi\src\zh\jmapi\build\outputs\apk\release\*.apk | Select-Object -First 1
+& .\scripts\generate-repo-metadata.ps1 -ApkPath $apk.FullName -OutputDir .\dist-local
+Get-Content -Raw .\dist-local\index.min.json | ConvertFrom-Json | Out-Null
+```
 
-- Read this design before editing code.
-- Update contract tests first and observe them fail.
-- Implement minimal Kotlin changes.
-- Current delivered `versionCode` is `9`; bump it again only for a later Kotlin behavior change.
-- Update README generated APK example.
-- Run `extension-contract.ps1`.
-- Build APK if Gradle/Android SDK are available.
-- Report any unavailable tools explicitly.
-- Do not claim complete without test evidence.
+若当前目录是项目根目录，必须在当前 PowerShell 进程直接调用脚本。外层 PowerShell 保持项目根目录并再启动 `powershell -File` 子进程时，外层 Windows 当前目录句柄会阻止子进程取得防删除共享的稳定父目录句柄；该场景必须明确失败，不能降低路径安全门禁。
 
-## Recommended First Pass
+脚本必须从构建配置读取版本，从 APK 读取签名证书 SHA-256，并生成和回读验证：
 
-Implement in this order:
+- `index.min.json`
+- `index.json`
+- `repo.json`
+- `apk/tachiyomi-zh.jmapi-v1.4.13.apk`
+- `icon/eu.kanade.tachiyomi.extension.zh.jmapi.png`
 
-1. Safe chapter URL parser.
-2. Runtime base URL preference.
-3. API prefetch disable preference.
-4. Search sort filter.
-5. README and contract tests.
-6. Optional tiny metadata cache only if clean and testable.
+两个 PowerShell 发布脚本共同加载 `scripts/path-safety.ps1`。它通过 `CreateFileW` 与 `GetFinalPathNameByHandleW` 解析 junction 的最终物理路径；对尚未存在的 stage/output 尾段，先解析最近既存祖先再拼接规范化尾段。中间 `src` junction 必须在创建 `zh` 前拒绝。内部 stage/backup 根不得是 reparse point，递归清理逐项处理且绝不跟随 reparse point；同父目录发布使用 `[IO.Directory]::Move` 的精确目标语义，move 后校验失败必须安全反向移动。元数据版本只接受无前导零歧义的数字点号语义，`[IO.Path]::GetFileName(apkName)` 必须与原名称完全相等，并用 `aapt2 dump badging` 校验真实 APK 的 package、versionCode、versionName 与 Gradle 完全一致。
 
-This order reduces risk: parsing and settings are isolated, then request-building changes, then user-facing search behavior.
+## 6. 真实 Suwayomi 验收结果
+
+已在 Suwayomi-Server 2.3.2243 安装 `v1.4.13 / versionCode 13` 并验证：
+
+1. 筛选实际显示“排序 / 最新 / 最多浏览 / 最多点赞”，设置显示“JM API 地址 / 禁用 API 预取”及中文说明。
+2. 当前 Base URL 为 `http://127.0.0.1:18088/api`，反向代理子路径正常。
+3. Popular、Latest、空搜索三种排序、标题搜索、JM ID、album URL 和纯数字 ID 均产生设计规定的请求。
+4. 详情、章节列表、12 页页面列表和 WebP 图片读取正常。
+5. enabled → disabled → enabled 时，图片请求依次移除、添加、再次移除 `prefetch=0`。
+6. 请求计数与 `initialized`/APK 元数据缓存决策已经按 3.6 节收敛。
+
+## 7. 完成定义
+
+只有以下条件全部满足才可称扩展交付完成：
+
+- 静态合同新鲜通过。
+- PowerShell 5.1 AST 无语法错误。
+- Spotless 和 assembleRelease 新鲜通过。
+- APK 名称、versionCode、README 和索引一致。
+- `index.min.json/index.json/repo.json` 可解析，签名指纹非空且来自实际 APK。
+- 可执行的本地验证全部完成，真实 Suwayomi 回归有实际请求证据。
+
+当前上述条件均已满足。Docker 多 worker 验收属于 API 外部环境阻塞，不影响扩展 APK 的本机完成判定。

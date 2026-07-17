@@ -28,7 +28,7 @@ Make the Suwayomi source filter work without a search keyword while preserving t
 ## 3. Current defects and logic audit
 
 1. `getFilterList()` exposes a filter that appears general, but `searchMangaRequest()` rejects an empty query before using it, so no API request is sent.
-2. One raw order string cannot model both upstream operations: title search uses `mr` for Latest, while the established catalog path uses `new`.
+2. One raw order string cannot model both upstream operations: title search uses `mr` for “最新”, while the established catalog path uses `new`.
 3. `searchMangaParse()` treats only a URL containing `search` as a list. A new `list=popular` response would otherwise be decoded incorrectly as `JmAlbumEnvelope`.
 4. JM ID/URL lookup correctly resolves one album and must stay outside sorting.
 5. PHP `fetchPopularList()` hard-codes `o=new`, so an extension-only change would still ignore the filter.
@@ -43,19 +43,19 @@ Make the Suwayomi source filter work without a search keyword while preserving t
 
 Expose exactly three choices:
 
-- Latest
-- Most views
-- Highest likes
+- 最新
+- 最多浏览
+- 最多点赞
 
 The mapping is deliberately context-specific:
 
 | User choice | Empty query catalog order | Title-search order |
 | --- | --- | --- |
-| Latest | `new` | `mr` |
-| Most views | `mv` | `mv` |
-| Highest likes | `tf` | `tf` |
+| 最新 | `new` | `mr` |
+| 最多浏览 | `mv` | `mv` |
+| 最多点赞 | `tf` | `tf` |
 
-The empty-query catalog request always uses category `latest`. `Most images` is excluded as an approved conservative scope choice: the Python reference can forward `mp`, but the current PHP service and desktop client do not expose or behavior-test that combination. The ambiguous `Default` label is replaced by explicit `Latest`.
+The empty-query catalog request always uses category `latest`. `Most images` is excluded as an approved conservative scope choice: the Python reference can forward `mp`, but the current PHP service and desktop client do not expose or behavior-test that combination. The ambiguous `Default` label is replaced by explicit `最新`.
 
 ## 5. Extension state machine
 
@@ -87,7 +87,7 @@ private data class SortOption(
 )
 ```
 
-`SortFilter` must select a `SortOption`, not coordinate parallel label/code arrays. Out-of-range state falls back to the first option, Latest.
+`SortFilter` must select a `SortOption`, not coordinate parallel label/code arrays. Out-of-range state falls back to the first option, 最新.
 
 Leave `popularMangaRequest()` and `latestUpdatesRequest()` unchanged because Suwayomi does not pass search filters to those callbacks.
 
@@ -126,16 +126,16 @@ The router normalizes the selected raw query value before the typed service call
 
 ## 8. Version and documentation contract
 
-### Extension target: v1.4.9
+### Extension target: v1.4.10
 
-- Bump `src/zh/jmapi/build.gradle.kts` `versionCode` from `8` to `9`.
+- Current extension target uses `src/zh/jmapi/build.gradle.kts` `versionCode = 10`.
 - Keep `libVersion = "1.4"`.
 - Update current-target references in:
   - `tests/extension-contract.ps1`
   - `README.md`
   - `docs/apk-optimization-design.md`
   - `docs/ai-delivery-prompt.md`
-- Artifact example becomes `tachiyomi-zh.jmapi-v1.4.9.apk`.
+- Artifact example becomes `tachiyomi-zh.jmapi-v1.4.10.apk`.
 - Historical statements may remain historical; current release claims must not remain v1.4.8.
 
 ### API target: 2026.07.13.1
@@ -171,10 +171,10 @@ The new contract must fail on current code because it requires:
 
 - `list=popular` to exist in the empty-query branch.
 - the old empty-query exception text to be absent.
-- a three-option model containing Latest, Most views, and Highest likes only.
-- Latest to carry `catalogOrder=new` and `searchOrder=mr`.
+- a three-option model containing 最新、最多浏览、最多点赞 only.
+- 最新 to carry `catalogOrder=new` and `searchOrder=mr`.
 - `searchMangaParse()` to parse URLs containing either `search` or `list` as lists.
-- the extension version to be 9/v1.4.9.
+- the extension version to be 10/v1.4.10.
 
 Remove or replace stale assertions that forbid `list=popular`, require `mp`, or require current v1.4.8.
 
@@ -207,12 +207,12 @@ If the execution environment can run PHP scripts without starting production rou
 
 | Query | Sort | Extension request | Upstream operation | Parser |
 | --- | --- | --- | --- | --- |
-| empty | Latest | `list=popular&order=new` | `categories/filter?c=latest&o=new` | list |
-| empty | Most views | `list=popular&order=mv` | `categories/filter?c=latest&o=mv` | list |
-| empty | Highest likes | `list=popular&order=tf` | `categories/filter?c=latest&o=tf` | list |
-| title | Latest | `search=<title>&order=mr` | `/search?...&o=mr` | list |
-| title | Most views | `search=<title>&order=mv` | `/search?...&o=mv` | list |
-| title | Highest likes | `search=<title>&order=tf` | `/search?...&o=tf` | list |
+| empty | 最新 | `list=popular&order=new` | `categories/filter?c=latest&o=new` | list |
+| empty | 最多浏览 | `list=popular&order=mv` | `categories/filter?c=latest&o=mv` | list |
+| empty | 最多点赞 | `list=popular&order=tf` | `categories/filter?c=latest&o=tf` | list |
+| title | 最新 | `search=<title>&order=mr` | `/search?...&o=mr` | list |
+| title | 最多浏览 | `search=<title>&order=mv` | `/search?...&o=mv` | list |
+| title | 最多点赞 | `search=<title>&order=tf` | `/search?...&o=tf` | list |
 | JM ID/URL | any | `jmid=<id>` | album detail | album |
 
 ## 12. Verification matrix
@@ -279,7 +279,7 @@ Completion requires every item below:
 - Empty query, title search, and JM ID/URL request branches match the state machine.
 - List/album parsing dispatch is explicit and correct.
 - PHP whitelist, default, alias precedence, and forwarding match the API contract.
-- Extension is v1.4.9/versionCode 9 and API is 2026.07.13.1 everywhere required.
+- Extension is v1.4.10/versionCode 10 and API is 2026.07.13.1 everywhere required.
 - New tests were observed failing before implementation and passing afterward.
 - All existing PowerShell contracts pass.
 - Kotlin build and PHP lint were run where supported; unavailable checks are reported, never marked passed.

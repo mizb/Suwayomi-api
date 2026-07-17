@@ -36,13 +36,13 @@ Expected baseline: PASS before test changes.
 Remove the assertion forbidding `list=popular`, the requirement for `mp`, and v1.4.8/versionCode 8 current-target assertions. Add focused assertions equivalent to:
 
 ```powershell
-Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*9'
+Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*10'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'addQueryParameter\("list",\s*"popular"\)'
 Assert-NotContains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'Enter a JM ID, album URL, or title'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'data class\s+SortOption'
-Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'SortOption\("Latest",\s*"new",\s*"mr"\)'
-Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'SortOption\("Most views",\s*"mv",\s*"mv"\)'
-Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'SortOption\("Highest likes",\s*"tf",\s*"tf"\)'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'SortOption\("最新",\s*"new",\s*"mr"\)'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'SortOption\("最多浏览",\s*"mv",\s*"mv"\)'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'SortOption\("最多点赞",\s*"tf",\s*"tf"\)'
 Assert-NotContains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'Most images'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'queryParameter\("list"\)'
 ```
@@ -53,7 +53,7 @@ Use the existing relative source path variable/style rather than introducing a s
 
 Run the same command.
 
-Expected: FAIL because `list=popular`, `SortOption`, dual mappings, parser dispatch, and versionCode 9 do not exist. A syntax or missing-file error is not an acceptable RED result.
+Expected: FAIL because `list=popular`, `SortOption`, dual mappings, parser dispatch, and versionCode 10 do not exist. A syntax or missing-file error is not an acceptable RED result.
 
 ---
 
@@ -75,9 +75,9 @@ private data class SortOption(
 )
 
 private val SORT_OPTIONS = arrayOf(
-    SortOption("Latest", "new", "mr"),
-    SortOption("Most views", "mv", "mv"),
-    SortOption("Highest likes", "tf", "tf"),
+    SortOption("最新", "new", "mr"),
+    SortOption("最多浏览", "mv", "mv"),
+    SortOption("最多点赞", "tf", "tf"),
 )
 
 private class SortFilter : Filter.Select<String>(
@@ -164,13 +164,13 @@ Expected: only version/document assertions may remain failing; request/filter/pa
 Change only:
 
 ```kotlin
-versionCode = 9
+versionCode = 10
 libVersion = "1.4"
 ```
 
 - [ ] **Step 2: Update current-target documentation**
 
-Replace current release/artifact references with v1.4.9/versionCode 9. Add concise README behavior:
+Replace current release/artifact references with v1.4.10/versionCode 10. Add concise README behavior:
 
 ```markdown
 Search sorting works with or without a title keyword. An empty keyword browses the full catalog; JM ID/album URL lookup returns the exact album and does not apply sorting.
@@ -356,7 +356,7 @@ Expected: `No syntax errors detected`. If PHP is unavailable, record `Get-Comman
 
 - [ ] **Step 2: Compile the extension when the workflow-compatible build tree is available**
 
-Run `:src:zh:jmapi:assembleRelease` in the Keiyoushi extension build environment. Expected: BUILD SUCCESSFUL and v1.4.9 artifact. If unavailable, document the exact missing environment/dependency.
+Run `:src:zh:jmapi:assembleRelease` in the Keiyoushi extension build environment. Expected: BUILD SUCCESSFUL and v1.4.10 artifact. If unavailable, document the exact missing environment/dependency.
 
 - [ ] **Step 3: Run the full PowerShell matrix again**
 
