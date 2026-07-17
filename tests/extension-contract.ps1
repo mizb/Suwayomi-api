@@ -148,7 +148,7 @@ function Assert-ExtensionSafetyCaseParity {
 }
 
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'name\s*=\s*"JM API"'
-Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*13'
+Assert-Contains "src/zh/jmapi/build.gradle.kts" 'versionCode\s*=\s*15'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'libVersion\s*=\s*"1\.4"'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'import\s+io\.github\.keiyoushi\.gradle\.api\.ContentWarning'
 Assert-Contains "src/zh/jmapi/build.gradle.kts" 'baseUrl\s*=\s*"http://127\.0\.0\.1:8088"'
@@ -252,7 +252,7 @@ Assert-NotContains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmAp
 
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'JM_PREFIX_REGEX\s*=\s*Regex\("""\(\?i\)JM\(\\d\{1,20\}\)\(\?!\\d\)"""\)'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'QUERY_ID_REGEX[\s\S]*?\\d\{1,20\}[\s\S]*?\(\?=\[&#\]\|\$\)'
-Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'PATH_ID_REGEX[\s\S]*?\\d\{1,20\}[\s\S]*?\(\?!\\d\)'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/JmApi.kt" 'PATH_ID_REGEX[\s\S]*?\\d\{1,20\}[\s\S]*?\(\?!\\d\)[\s\S]*?\(\?=\[/\?#\]\|\$\)'
 
 $queryIdRegex = [regex]'[?&](?:jmid|id)=(\d{1,20})(?=[&#]|$)'
 foreach ($invalidQueryId in @(
@@ -268,6 +268,18 @@ foreach ($validQueryId in @('?jmid=123', '?id=456&x=1', '?jmid=789#fragment')) {
     }
 }
 
+$pathIdRegex = [regex]'/(?:(?:album|photo)s?)/(\d{1,20})(?!\d)(?=[/?#]|$)'
+foreach ($invalidPathId in @('/album/123abc', '/photo/456.7', '/albums/123456789012345678901')) {
+    if ($pathIdRegex.IsMatch($invalidPathId)) {
+        throw "PATH_ID_REGEX accepted a non-complete path value: $invalidPathId"
+    }
+}
+foreach ($validPathId in @('/album/123', '/photos/456/', '/album/789?from=library', '/photo/987#reader')) {
+    if (-not $pathIdRegex.IsMatch($validPathId)) {
+        throw "PATH_ID_REGEX rejected a complete path value: $validPathId"
+    }
+}
+
 $pageParseBody = [regex]::Match(
     $jmApiSource,
     'override fun pageListParse\([\s\S]*?(?<body>val data[\s\S]*?)\n    override fun imageUrlParse'
@@ -279,6 +291,12 @@ if ([string]::IsNullOrWhiteSpace($pageParseBody) -or
 }
 if ($pageParseBody -match 'chapters\.firstOrNull\(\)') {
     throw 'pageListParse must not silently use the first returned chapter'
+}
+if ($pageParseBody -notmatch 'imageUrl\s*=\s*pageImageUrl\(data\.album\.albumId,\s*chapter\.photoId,\s*pageNumber\)') {
+    throw 'pageListParse must rebuild every image URL from the configured API endpoint'
+}
+if ($pageParseBody -match 'chapter\.images\.getOrNull\([^)]*\)\?\.url') {
+    throw 'pageListParse must not trust an absolute image URL from the API payload'
 }
 
 $requestBody = [regex]::Match(
@@ -368,7 +386,13 @@ Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt"
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'val image: String = ""'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'data class JmChapterDto'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'data class JmListEnvelope'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'data class JmListEnvelope\s*\([\s\S]*?val total: Long = 0L'
+Assert-NotContains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'data class JmListEnvelope\s*\([\s\S]*?val total: Int = 0'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'data class JmListItemDto'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'val likes: Long = 0L'
+Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" '@SerialName\("total_views"\) val totalViews: Long = 0L'
+Assert-NotContains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'val likes: Int'
+Assert-NotContains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" '@SerialName\("total_views"\) val totalViews: Int'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'fun JmAlbumEnvelope.toSManga'
 Assert-Contains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'fun\s+JmAlbumEnvelope\.toSManga\(\):\s*SManga'
 Assert-NotContains "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt" 'toSManga\(baseUrl:\s*String\)'
@@ -427,17 +451,17 @@ Assert-Contains "README.md" '\u7981\u7528 API \u9884\u53d6'
 Assert-Contains "README.md" 'SIGNING_KEYSTORE_BASE64'
 Assert-Contains "README.md" 'Popular.*original homepage recommendations'
 Assert-Contains "README.md" 'Latest.*original weekly picks'
-Assert-Contains "README.md" 'tachiyomi-zh\.jmapi-v1\.4\.13\.apk'
-Assert-Contains "README.md" '2026\.07\.13\.2'
-Assert-Contains "docs/apk-optimization-design.md" '1\.4\.13'
-Assert-Contains "docs/apk-optimization-design.md" 'versionCode\s*=\s*13'
+Assert-Contains "README.md" 'tachiyomi-zh\.jmapi-v1\.4\.15\.apk'
+Assert-Contains "README.md" '2026\.07\.17\.1'
+Assert-Contains "docs/apk-optimization-design.md" '1\.4\.15'
+Assert-Contains "docs/apk-optimization-design.md" 'versionCode\s*=\s*15'
 Assert-Contains "docs/apk-optimization-design.md" 'Popular.*promote'
 Assert-Contains "docs/apk-optimization-design.md" 'Latest.*weekly'
 Assert-Contains "docs/apk-optimization-design.md" 'junction.*\u7269\u7406\u8def\u5f84'
 Assert-Contains "docs/apk-optimization-design.md" 'settings\.gradle\.kts.*\u539f\u59cb\u5b57\u8282'
 Assert-Contains "docs/apk-optimization-design.md" 'libVersion.*\u6570\u5b57\u70b9\u53f7'
-Assert-Contains "docs/ai-delivery-prompt.md" 'v1\.4\.13'
-Assert-Contains "docs/ai-delivery-prompt.md" 'versionCode 13'
+Assert-Contains "docs/ai-delivery-prompt.md" 'v1\.4\.15'
+Assert-Contains "docs/ai-delivery-prompt.md" 'versionCode 15'
 Assert-Contains "docs/ai-delivery-prompt.md" 'junction.*\u7269\u7406\u8def\u5f84'
 Assert-Contains "docs/ai-delivery-prompt.md" 'D:\\jm\\jmcomic-api-main'
 Assert-NotContains "docs/ai-delivery-prompt.md" 'D:\\jm\\jm-boom-master\\jmcomic-api-main'
@@ -616,8 +640,8 @@ try {
 }
 
 $readme = Get-Content -LiteralPath (Join-Path $root "README.md") -Raw -Encoding UTF8
-if ($readme -match 'tachiyomi-zh\.jmapi-v1\.4\.(?:[1-9]|1[0-2])\.apk') {
-    throw "README contains stale APK version before v1.4.13"
+if ($readme -match 'tachiyomi-zh\.jmapi-v1\.4\.(?:[1-9]|1[0-4])\.apk') {
+    throw "README contains stale APK version before v1.4.15"
 }
 
 $dto = Get-Content -LiteralPath (Join-Path $root "src/zh/jmapi/src/eu/kanade/tachiyomi/extension/zh/jmapi/Dto.kt") -Raw -Encoding UTF8

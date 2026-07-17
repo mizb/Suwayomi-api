@@ -14,7 +14,7 @@ Search sorting works with or without a title keyword. An empty keyword browses t
 
 `index.min.json` cannot call a PHP API directly. Suwayomi reads `index.min.json`, downloads an APK, and the APK calls the API. This project builds that APK and generates a complete Suwayomi extension repository:
 
-- `apk/tachiyomi-zh.jmapi-v1.4.13.apk`
+- `apk/tachiyomi-zh.jmapi-v1.4.15.apk`
 - `icon/eu.kanade.tachiyomi.extension.zh.jmapi.png`
 - `index.min.json`
 - `index.json`
@@ -110,11 +110,11 @@ http://192.168.1.20:8088
 
 API 预取默认启用，因此图片请求默认不含 `prefetch=0`。弱性能主机或 Suwayomi 预加载过多时，可在源设置中开启“禁用 API 预取”；扩展会在实际 `imageRequest()` 时为同一 API、同一反代路径的 decoded-page URL 设置 `prefetch=0`。重新关闭“禁用 API 预取”后，即使章节已经加载，后续图片请求也会移除旧的 `prefetch` 参数。外部 CDN URL 和同主机的其他应用路径不会被改写。
 
-“JM API 地址”支持根路径和反向代理子路径，例如 `https://example.com/jm-api`。地址不得包含用户名、密码、query 或 fragment，也不得使用 `0.0.0.0`、`::` 及 `0`、`00`、`0.0.0.00`、`0.0.0.0.`、`00.0.0.0.` 等全零数字 IPv4 等价形式；普通绝对 DNS 名（如 `api.example.com.`）仍可使用。修改设置后，扩展会立即重新校验并使用新地址，不需要重装 APK。
+“JM API 地址”支持根路径和反向代理子路径，例如 `https://example.com/jm-api`。地址不得包含用户名、密码、query 或 fragment，也不得使用 `0.0.0.0`、`::` 及 `0`、`00`、`0.0.0.00`、`0.0.0.0.`、`00.0.0.0.` 等全零数字 IPv4 等价形式；普通绝对 DNS 名（如 `api.example.com.`）仍可使用。修改设置后，扩展会立即重新校验并使用新地址，不需要重装 APK。`127.0.0.1` 只适用于 Suwayomi 进程与 API 位于同一网络命名空间；若 Suwayomi 在独立 Docker 容器内，应填写可从该容器访问的 API 服务名、`host.docker.internal`（平台支持时）或局域网地址。
 
-当前扩展版本为 `1.4.13`（`versionCode = 13`）。筛选标题和设置说明已中文化；筛选值仍固定为“最新 / 最多浏览 / 最多点赞”，其请求映射保持不变。
+当前扩展版本为 `1.4.15`（`versionCode = 15`）。筛选标题和设置说明已中文化；筛选值仍固定为“最新 / 最多浏览 / 最多点赞”，其请求映射保持不变。页面图片 URL 始终从当前受校验的 API 地址重建，不再让响应中的绝对 URL 丢失反代子路径或绕过预取开关。
 
-配套 API 交付版本为 `2026.07.13.2`。升级 APK 不要求改变 API JSON，但建议同时重建 API 容器以取得请求预算、列表/album 缓存、预取资源边界、CDN failover 和可信代理修复：
+配套 API 交付版本为 `2026.07.17.1`。升级 APK 不要求改变 API JSON，但建议同时重建 API 容器以取得输入校验、失败传播、请求预算、列表/album 缓存、预取资源边界、CDN failover 和可信代理修复：
 
 ```powershell
 Set-Location D:\jm\jmcomic-api-main

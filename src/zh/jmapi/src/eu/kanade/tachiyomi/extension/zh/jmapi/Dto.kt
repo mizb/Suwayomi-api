@@ -55,7 +55,7 @@ data class JmChapterEnvelope(
 data class JmListEnvelope(
     val mode: String = "",
     val page: Int = 1,
-    val total: Int = 0,
+    val total: Long = 0L,
     @SerialName("has_next_page") val hasNextPage: Boolean = false,
     val items: List<JmListItemDto> = emptyList(),
 )
@@ -84,8 +84,8 @@ data class JmListItemDto(
     val description: String = "",
     val image: String = "",
     val tags: List<String> = emptyList(),
-    val likes: Int = 0,
-    @SerialName("total_views") val totalViews: Int = 0,
+    val likes: Long = 0L,
+    @SerialName("total_views") val totalViews: Long = 0L,
     @SerialName("updated_at") val updatedAt: Long? = null,
 )
 

@@ -6,7 +6,7 @@ plugins {
 
 keiyoushi {
     name = "JM API"
-    versionCode = 13
+    versionCode = 15
     contentWarning = ContentWarning.NSFW
     libVersion = "1.4"
 

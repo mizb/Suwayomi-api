@@ -194,11 +194,9 @@ abstract class JmApi :
         if (pageCount <= 0) throw IOException("No pages found for JM chapter ${chapter.photoId}")
 
         return (1..pageCount).map { pageNumber ->
-            val imageUrl = chapter.images.getOrNull(pageNumber - 1)?.url
             Page(
                 index = pageNumber - 1,
-                imageUrl = imageUrl?.takeIf { it.isNotBlank() }
-                    ?: pageImageUrl(data.album.albumId, chapter.photoId, pageNumber),
+                imageUrl = pageImageUrl(data.album.albumId, chapter.photoId, pageNumber),
             )
         }
     }
@@ -360,7 +358,7 @@ abstract class JmApi :
         private val JM_PREFIX_REGEX = Regex("""(?i)JM(\d{1,20})(?!\d)""")
         private val PURE_ID_REGEX = Regex("""(\d{1,20})""")
         private val QUERY_ID_REGEX = Regex("""[?&](?:jmid|id)=(\d{1,20})(?=[&#]|$)""")
-        private val PATH_ID_REGEX = Regex("""/(?:(?:album|photo)s?)/(\d{1,20})(?!\d)(?:/|$)""", RegexOption.IGNORE_CASE)
+        private val PATH_ID_REGEX = Regex("""/(?:(?:album|photo)s?)/(\d{1,20})(?!\d)(?=[/?#]|$)""", RegexOption.IGNORE_CASE)
         private val ID_VALUE_REGEX = Regex("""\d{1,20}""")
         private val UNSPECIFIED_HOSTS = setOf("0.0.0.0", "::")
         private val UNSPECIFIED_IPV4_REGEX = Regex("""0+(?:\.0+){0,3}""")

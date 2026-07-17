@@ -2,10 +2,10 @@
     {
         "name":  "Tachiyomi: JM API",
         "pkg":  "eu.kanade.tachiyomi.extension.zh.jmapi",
-        "apk":  "tachiyomi-zh.jmapi-v1.4.13.apk",
+        "apk":  "tachiyomi-zh.jmapi-v1.4.15.apk",
         "lang":  "zh",
-        "code":  13,
-        "version":  "1.4.13",
+        "code":  15,
+        "version":  "1.4.15",
         "nsfw":  1,
         "sources":  [
                         {

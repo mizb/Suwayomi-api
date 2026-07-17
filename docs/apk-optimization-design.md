@@ -1,7 +1,7 @@
 # JM API Suwayomi 扩展深化设计与交付基线
 
 日期：2026-07-17  
-状态：扩展端实现、静态/安全合同、真实构建、仓库元数据和 Suwayomi 2.3.2243 实际回归均已完成；结果汇总见 `D:\jm\jmcomic-api-main\docs\performance-delivery-report.md`。
+状态：`v1.4.15` 规范化页面 URL 修复、静态/安全合同、真实构建、仓库元数据和 Suwayomi 2.3.2243 升级回归均已完成。结果汇总见 `D:\jm\jmcomic-api-main\docs\performance-delivery-report.md`。
 
 ## 1. 项目与版本
 
@@ -9,9 +9,9 @@
 - API 项目：`D:\jm\jmcomic-api-main`
 - Kotlin 主文件：`D:\jm\jmapi-extension\src\zh\jmapi\src\eu\kanade\tachiyomi\extension\zh\jmapi\JmApi.kt`
 - DTO：`D:\jm\jmapi-extension\src\zh\jmapi\src\eu\kanade\tachiyomi\extension\zh\jmapi\Dto.kt`
-- 当前目标版本：`1.4.13`
-- 构建配置：`versionCode = 13`、`libVersion = "1.4"`
-- 目标 APK：`tachiyomi-zh.jmapi-v1.4.13.apk`
+- 当前目标版本：`1.4.15`
+- 构建配置：`versionCode = 15`、`libVersion = "1.4"`
+- 目标 APK：`tachiyomi-zh.jmapi-v1.4.15.apk`
 
 扩展只访问 PHP API，不直接访问 JM 上游。API 端口保持 `8088`。
 
@@ -89,6 +89,8 @@ private data class ApiEndpoint(
 
 参数通过 `addQueryParameter`、`setQueryParameter` 和 `removeAllQueryParameters` 管理，避免反代子路径、转义字符或已有 query 被字符串拼接破坏。
 
+`pageListParse()` 对每一页都使用当前 `ApiEndpoint`、album ID、chapter ID 和页码重建 decoded-page URL。API JSON 中的 `images[].url` 只作为兼容字段反序列化，不作为请求地址；否则一个非空但缺少 `/api` 前缀的绝对 URL 会绕过严格路径检查，使反代路由和 `prefetch=0` 同时失效。
+
 ### 3.6 DTO 与请求次数
 
 `JmAlbumEnvelope.toSManga()` 不再接收未使用的 Base URL 参数，避免一次无意义的偏好读取和 URL 解析。
@@ -103,6 +105,7 @@ private data class ApiEndpoint(
 | 用户切回启用预取但旧 URL 仍含 `prefetch=0` | 在 `imageRequest()` 双向增删参数 |
 | 21 位 ID 被截成 20 位 | `{1,20}` 后增加 `(?!\d)`，完整输入使用 `matchEntire` |
 | API 返回其他章节 | 按 requested chapter 精确查找并失败关闭 |
+| API 返回缺少反代前缀的非空绝对图片 URL | 忽略载荷 URL，按当前 `ApiEndpoint` 与 album/chapter/page 重建每页地址 |
 | 设置修改后继续使用旧地址 | 缓存记录 raw preference，变化即失效 |
 | 非法 Base URL 造成凭据泄漏或错误请求 | 拒绝 userinfo/query/fragment/未指定地址 |
 | junction/符号链接绕过源树、输出树边界 | 使用 Win32 最终物理路径解析已存在祖先和未存在尾段，所有移动、swap、删除前重新校验 |
@@ -151,21 +154,22 @@ Get-Content -Raw .\dist-local\index.min.json | ConvertFrom-Json | Out-Null
 - `index.min.json`
 - `index.json`
 - `repo.json`
-- `apk/tachiyomi-zh.jmapi-v1.4.13.apk`
+- `apk/tachiyomi-zh.jmapi-v1.4.15.apk`
 - `icon/eu.kanade.tachiyomi.extension.zh.jmapi.png`
 
 两个 PowerShell 发布脚本共同加载 `scripts/path-safety.ps1`。它通过 `CreateFileW` 与 `GetFinalPathNameByHandleW` 解析 junction 的最终物理路径；对尚未存在的 stage/output 尾段，先解析最近既存祖先再拼接规范化尾段。中间 `src` junction 必须在创建 `zh` 前拒绝。内部 stage/backup 根不得是 reparse point，递归清理逐项处理且绝不跟随 reparse point；同父目录发布使用 `[IO.Directory]::Move` 的精确目标语义，move 后校验失败必须安全反向移动。元数据版本只接受无前导零歧义的数字点号语义，`[IO.Path]::GetFileName(apkName)` 必须与原名称完全相等，并用 `aapt2 dump badging` 校验真实 APK 的 package、versionCode、versionName 与 Gradle 完全一致。
 
 ## 6. 真实 Suwayomi 验收结果
 
-已在 Suwayomi-Server 2.3.2243 安装 `v1.4.13 / versionCode 13` 并验证：
+环境：Suwayomi-Server `2.3.2243`、source ID `3584941114123005289`、Base URL `http://127.0.0.1:18088/api`。
 
-1. 筛选实际显示“排序 / 最新 / 最多浏览 / 最多点赞”，设置显示“JM API 地址 / 禁用 API 预取”及中文说明。
-2. 当前 Base URL 为 `http://127.0.0.1:18088/api`，反向代理子路径正常。
-3. Popular、Latest、空搜索三种排序、标题搜索、JM ID、album URL 和纯数字 ID 均产生设计规定的请求。
-4. 详情、章节列表、12 页页面列表和 WebP 图片读取正常。
-5. enabled → disabled → enabled 时，图片请求依次移除、添加、再次移除 `prefetch=0`。
-6. 请求计数与 `initialized`/APK 元数据缓存决策已经按 3.6 节收敛。
+1. `v1.4.14 / versionCode 14` 的 RED：设置在图片请求前后均显示禁用预取为 `true`，API 的 `disabled` 计数不变，只增加 `skipped-low-memory`；章节 JSON 的绝对图片 URL 丢失 `/api`。
+2. 已升级安装 `v1.4.15 / versionCode 15`：`installed=true`、`hasUpdate=false`。
+3. 筛选实际显示“排序 / 最新 / 最多浏览 / 最多点赞”，设置显示“JM API 地址 / 禁用 API 预取”及中文说明。
+4. Popular、Latest、空搜索“最多点赞”、标题搜索和 `JM350234` 均成功；fixture 分别命中 `/promote`、`/week + /week/filter`、`/categories/filter`、`/search`、`/album`。
+5. 详情、章节列表和页面列表成功；聚焦修复回归返回 12 页，两次图片均 HTTP 200、WebP、58 bytes。
+6. `v1.4.15` 的 GREEN：禁用时 API `disabled` 计数 `0 → 1`；重新启用并清理宿主页缓存后再次取图，`disabled` 保持 `1`，证明最终请求恢复移除 `prefetch=0`。
+7. 受控把 API 地址切到未监听的 18089 时页面刷新返回 `ConnectException`，恢复 18088 后同一章节成功；这证明 Suwayomi 调用栈尾不能代替栈首 `Caused by`。
 
 ## 7. 完成定义
 
@@ -178,4 +182,4 @@ Get-Content -Raw .\dist-local\index.min.json | ConvertFrom-Json | Out-Null
 - `index.min.json/index.json/repo.json` 可解析，签名指纹非空且来自实际 APK。
 - 可执行的本地验证全部完成，真实 Suwayomi 回归有实际请求证据。
 
-当前上述条件均已满足。Docker 多 worker 验收属于 API 外部环境阻塞，不影响扩展 APK 的本机完成判定。
+当前上述条件均已满足。Docker 多 worker 验收属于 API 外部环境阻塞，不影响扩展 APK 自身的本机完成判定。

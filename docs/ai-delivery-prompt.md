@@ -2,7 +2,7 @@
 
 本文件是后续 AI 的执行边界。提示词只需要求 AI 完整读取并自主执行本文件；主要目标、契约和验收条件都在这里。
 
-当前检查点（2026-07-17）：`v1.4.13 / versionCode 13` 已完成合同、安全用例、Keiyoushi 构建、元数据、签名和 Suwayomi 2.3.2243 实际回归。后续先读取跨项目最终报告并核对哈希；未变化时不得重做已经验证的实现。
+当前检查点（2026-07-17）：`v1.4.15 / versionCode 15` 已完成真实构建、元数据和 Suwayomi 2.3.2243 升级回归；`v1.4.14 / 14` 的反代子路径页面 URL 丢失是 RED 历史基线。后续先读取 bug 排查审计、规范化页面 URL 设计与跨项目最终报告并核对哈希；不得把旧版宿主结果冒充为新 APK 结果。
 
 ## 角色与停止条件
 
@@ -30,10 +30,10 @@
 
 ## 当前扩展交付目标
 
-- 目标 APK：`v1.4.13`
-- `versionCode 13`
+- 目标 APK：`v1.4.15`
+- `versionCode 15`
 - `libVersion = "1.4"`
-- APK 文件：`tachiyomi-zh.jmapi-v1.4.13.apk`
+- APK 文件：`tachiyomi-zh.jmapi-v1.4.15.apk`
 - 默认 API：`http://127.0.0.1:8088`
 
 若执行时行为版本已经高于此值，只能递增到更高且统一的新版本，不能降级。
@@ -60,6 +60,7 @@
 - 所有请求和展示 URL 使用 `HttpUrl.Builder`。
 - 同源 decoded-page 判断精确比较 scheme/host/port/path segments；不得把 `/api2` 或 `/api/other` 当作 `/api`。
 - 预取偏好只在 `imageRequest()` 最终双向同步：禁用时设置 `prefetch=0`，启用时移除；外部 URL 不改。
+- `pageListParse()` 必须忽略 API 载荷中的绝对 `images[].url`，按当前受校验 endpoint 与 album/chapter/page 重建每页 URL；禁止用放宽 base path 同源规则掩盖反代前缀丢失。
 - JM ID 统一为 1～20 位并有尾部数字边界；21 位整体拒绝。
 - 单章响应按 requested chapter 精确选择，禁止使用第一个章节兜底。
 - 旧 album URL 去除尾斜杠后严格解析。
@@ -110,10 +111,10 @@ Get-Content -Raw .\dist-local\repo.json | ConvertFrom-Json | Out-Null
 - 全部静态合同新鲜通过。
 - 可用时执行 Docker build/runtime、fixture 故障注入、Redis 并发、CDN failover、缓存和预取回归。
 - 使用相同条件生成 before/after 性能数据；样本不足不得伪报 p95/p99。
-- Suwayomi 回归已经完成；除非 APK、设置或宿主版本变化，不重复执行。当前证据包括中文筛选/设置、Popular、Latest、标题/ID 搜索、详情、章节、阅读、反代子路径和预取双向切换。
+- `v1.4.15` 的 Suwayomi 回归已经完成，证据覆盖中文筛选/设置、Popular、Latest、空/标题/ID 搜索、详情、章节、阅读、反代子路径和预取双向切换。除非 APK、设置或宿主版本变化，不重复执行。
 - 写入 `D:\jm\jmcomic-api-main\docs\performance-delivery-report.md`，包含文件、行为、完整测试摘要、性能数据、部署/回滚命令、未执行项和剩余风险。
 
-当前机器 Docker 不可用，但真实 Suwayomi 已完成。Docker-capable 主机到位后自主执行 compose 多 worker/runtime/fault 验收；真实 BEFORE 或生产密钥未提供时继续保留为有证据的外部阻塞。
+当前机器 Docker 不可用，但 `v1.4.15` 的本机 Suwayomi 回归已完成。Docker-capable 主机到位后自主执行 compose 多 worker/runtime/fault 验收；当前源码对应的正式 BEFORE 或生产密钥未提供时继续保留为有证据的外部阻塞。
 
 ## 交付输出
 
@@ -131,5 +132,5 @@ Get-Content -Raw .\dist-local\repo.json | ConvertFrom-Json | Out-Null
 ## 给 AI 的简短启动提示词
 
 ```text
-完整读取并严格执行 D:\jm\jmapi-extension\docs\ai-delivery-prompt.md；先核对跨项目最终报告哈希，未变化时不要重做已验证的 v1.4.13 和 Suwayomi 回归，只自主完成已具备条件的外部验收并更新报告。失败必须根因诊断、最小修复、全量复测；不得改变固定筛选/API/章节/缓存契约，不得伪造 Git、BEFORE 或性能百分比。
+完整读取并严格执行 D:\jm\jmapi-extension\docs\ai-delivery-prompt.md；先核对规范化页面 URL 设计、bug 排查审计、最终报告和当前哈希，保持 v1.4.15/15 与 API 2026.07.17.1 一致，自主完成所有具备条件的验证和交付。失败必须根因诊断、最小修复、相关复测；不得改变固定筛选/API/章节/缓存契约，不得把 v1.4.14 的缺陷复现冒充为新 APK 通过结果，也不得伪造 Git、BEFORE 或性能百分比。
 ```

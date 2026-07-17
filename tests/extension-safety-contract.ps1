@@ -1189,17 +1189,17 @@ function Invoke-ManifestMismatchCase {
     $projectRoot = Join-Path $fixture 'project'
     $outputDir = Join-Path $fixture 'published-repo'
     $outputMarker = Join-Path $outputDir 'must-survive.bin'
-    $apkPath = Join-Path $root 'dist-local\apk\tachiyomi-zh.jmapi-v1.4.13.apk'
+    $apkPath = Join-Path $root 'dist-local\apk\tachiyomi-zh.jmapi-v1.4.15.apk'
     if (-not (Test-Path -LiteralPath $apkPath -PathType Leaf)) {
-        $apkPath = 'D:\jm\keiyoushi\src\zh\jmapi\build\outputs\apk\release\tachiyomi-zh.jmapi-v1.4.13-release.apk'
+        $apkPath = 'D:\jm\keiyoushi\src\zh\jmapi\build\outputs\apk\release\tachiyomi-zh.jmapi-v1.4.15-release.apk'
     }
     try {
-        Assert-True -Condition (Test-Path -LiteralPath $apkPath -PathType Leaf) -Message 'Manifest mismatch contract requires the freshly signed v1.4.13 APK.'
+        Assert-True -Condition (Test-Path -LiteralPath $apkPath -PathType Leaf) -Message 'Manifest mismatch contract requires the freshly signed v1.4.15 APK.'
         $apkHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $apkPath).Hash
         New-Item -ItemType Directory -Path (Join-Path $projectRoot 'src\zh\jmapi\res\mipmap-xxxhdpi') -Force | Out-Null
         [System.IO.File]::WriteAllText(
             (Join-Path $projectRoot 'src\zh\jmapi\build.gradle.kts'),
-            "versionCode = 14`r`nlibVersion = `"1.4`"`r`nbaseUrl = `"http://127.0.0.1:8088`"`r`n"
+            "versionCode = 16`r`nlibVersion = `"1.4`"`r`nbaseUrl = `"http://127.0.0.1:8088`"`r`n"
         )
         Write-Bytes `
             -Path (Join-Path $projectRoot 'src\zh\jmapi\res\mipmap-xxxhdpi\ic_launcher.png') `
@@ -1216,7 +1216,7 @@ function Invoke-ManifestMismatchCase {
             $errorText = $_.Exception.Message
         }
 
-        Assert-True -Condition $rejected -Message 'Metadata helper published a v1.4.13 APK under mismatched v1.4.14 metadata.'
+        Assert-True -Condition $rejected -Message 'Metadata helper published a v1.4.15 APK under mismatched v1.4.16 metadata.'
         Assert-True `
             -Condition ($errorText -match '(?i)manifest.*(?:versionCode|versionName)|does not match') `
             -Message "Manifest mismatch rejection was not explicit: '$errorText'."
@@ -1237,14 +1237,14 @@ function Invoke-MetadataStageCollisionCase {
     $projectRoot = Join-Path $fixture 'project'
     $outputDir = Join-Path $fixture 'published-repo'
     $outputMarker = Join-Path $outputDir 'must-survive.bin'
-    $apkPath = Join-Path $root 'dist-local\apk\tachiyomi-zh.jmapi-v1.4.13.apk'
+    $apkPath = Join-Path $root 'dist-local\apk\tachiyomi-zh.jmapi-v1.4.15.apk'
     $state = [pscustomobject]@{ Attempted = $false; Stage = '' }
     try {
-        Assert-True -Condition (Test-Path -LiteralPath $apkPath -PathType Leaf) -Message 'Metadata stage-collision contract requires the freshly signed v1.4.13 APK.'
+        Assert-True -Condition (Test-Path -LiteralPath $apkPath -PathType Leaf) -Message 'Metadata stage-collision contract requires the freshly signed v1.4.15 APK.'
         New-Item -ItemType Directory -Path (Join-Path $projectRoot 'src\zh\jmapi\res\mipmap-xxxhdpi') -Force | Out-Null
         [System.IO.File]::WriteAllText(
             (Join-Path $projectRoot 'src\zh\jmapi\build.gradle.kts'),
-            "versionCode = 13`r`nlibVersion = `"1.4`"`r`nbaseUrl = `"http://127.0.0.1:8088`"`r`n"
+            "versionCode = 15`r`nlibVersion = `"1.4`"`r`nbaseUrl = `"http://127.0.0.1:8088`"`r`n"
         )
         Write-Bytes `
             -Path (Join-Path $projectRoot 'src\zh\jmapi\res\mipmap-xxxhdpi\ic_launcher.png') `
@@ -1393,10 +1393,10 @@ function Invoke-TrailingDotHostCase {
 
 function Invoke-VersionReferencesCase {
     $expectations = [ordered]@{
-        'src\zh\jmapi\build.gradle.kts' = @('versionCode\s*=\s*13')
-        'README.md' = @('tachiyomi-zh\.jmapi-v1\.4\.13\.apk', '1\.4\.13', 'versionCode\s*=\s*13')
-        'docs\apk-optimization-design.md' = @('tachiyomi-zh\.jmapi-v1\.4\.13\.apk', '1\.4\.13', 'versionCode\s*=\s*13')
-        'docs\ai-delivery-prompt.md' = @('tachiyomi-zh\.jmapi-v1\.4\.13\.apk', 'v1\.4\.13', 'versionCode 13')
+        'src\zh\jmapi\build.gradle.kts' = @('versionCode\s*=\s*15')
+        'README.md' = @('tachiyomi-zh\.jmapi-v1\.4\.15\.apk', '1\.4\.15', 'versionCode\s*=\s*15')
+        'docs\apk-optimization-design.md' = @('tachiyomi-zh\.jmapi-v1\.4\.15\.apk', '1\.4\.15', 'versionCode\s*=\s*15')
+        'docs\ai-delivery-prompt.md' = @('tachiyomi-zh\.jmapi-v1\.4\.15\.apk', 'v1\.4\.15', 'versionCode 15')
     }
     foreach ($entry in $expectations.GetEnumerator()) {
         $text = [System.IO.File]::ReadAllText((Join-Path $root $entry.Key))
@@ -1407,13 +1407,17 @@ function Invoke-VersionReferencesCase {
         }
     }
 
-    $stalePattern = '1\.4\.' + '12|versionCode\s*=\s*' + '12|v1\.4\.' + '12'
-    $stale = @(Get-ChildItem -LiteralPath $root -Recurse -File | Where-Object {
-        $_.FullName -notmatch '[\\/]dist-local[\\/]' -and
-        $_.FullName -notmatch '[\\/]build[\\/]'
-    } | Select-String -Pattern $stalePattern)
-    if ($stale.Count -ne 0) {
-        throw "Stale prior-version references remain: $($stale.Path -join ', ')."
+    $staleDeclarations = [ordered]@{
+        'src\zh\jmapi\build.gradle.kts' = 'versionCode\s*=\s*14'
+        'README.md' = '当前扩展版本为\s*`1\.4\.14`|tachiyomi-zh\.jmapi-v1\.4\.14\.apk'
+        'docs\apk-optimization-design.md' = '当前目标版本：`1\.4\.14`|构建配置：`versionCode\s*=\s*14`|目标 APK：`tachiyomi-zh\.jmapi-v1\.4\.14\.apk`'
+        'docs\ai-delivery-prompt.md' = '目标 APK：`v1\.4\.14`|`versionCode 14`|APK 文件：`tachiyomi-zh\.jmapi-v1\.4\.14\.apk`'
+    }
+    foreach ($entry in $staleDeclarations.GetEnumerator()) {
+        $text = [System.IO.File]::ReadAllText((Join-Path $root $entry.Key))
+        if ($text -match $entry.Value) {
+            throw "Stale prior-version declaration remains in '$($entry.Key)'."
+        }
     }
 }
 
