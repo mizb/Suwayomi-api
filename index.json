@@ -1,0 +1,19 @@
+[
+  {
+    "name": "Tachiyomi: JM API",
+    "pkg": "eu.kanade.tachiyomi.extension.zh.jmapi",
+    "apk": "tachiyomi-zh.jmapi-v1.4.15.apk",
+    "lang": "zh",
+    "code": 15,
+    "version": "1.4.15",
+    "nsfw": 1,
+    "sources": [
+      {
+        "name": "JM API",
+        "lang": "zh",
+        "id": "3584941114123005289",
+        "baseUrl": "http://127.0.0.1:8088"
+      }
+    ]
+  }
+]
