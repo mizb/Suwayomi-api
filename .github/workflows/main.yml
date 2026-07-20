@@ -95,17 +95,50 @@ jobs:
         run: |
           set -euo pipefail
 
-          APK_SOURCE="$(find keiyoushi/src/zh/jmapi/build/outputs/apk/release -name '*.apk' | head -n 1)"
-          if [ -z "${APK_SOURCE}" ]; then
-            echo "No APK was produced." >&2
+          mapfile -t APK_SOURCES < <(find keiyoushi/src/zh/jmapi/build/outputs/apk/release -type f -name '*.apk' -print)
+          if [ "${#APK_SOURCES[@]}" -ne 1 ]; then
+            echo "assembleRelease must produce exactly one APK; found ${#APK_SOURCES[@]}." >&2
             exit 1
           fi
+          APK_SOURCE="${APK_SOURCES[0]}"
 
           VERSION_CODE="$(grep -E 'versionCode\s*=' src/zh/jmapi/build.gradle.kts | grep -Eo '[0-9]+' | head -n 1)"
           LIB_VERSION="$(grep -E 'libVersion\s*=' src/zh/jmapi/build.gradle.kts | sed -E 's/.*"([^"]+)".*/\1/' | head -n 1)"
+          if ! [[ "${LIB_VERSION}" =~ ^(0|[1-9][0-9]*)(\.(0|[1-9][0-9]*))+$ ]]; then
+            echo "LIB_VERSION must use canonical numeric dotted notation; got '${LIB_VERSION}'." >&2
+            exit 1
+          fi
+          if ! [[ "${VERSION_CODE}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "VERSION_CODE must be a positive decimal integer; got '${VERSION_CODE}'." >&2
+            exit 1
+          fi
           VERSION="${LIB_VERSION}.${VERSION_CODE}"
           APK_NAME="tachiyomi-zh.jmapi-v${VERSION}.apk"
+          if ! [[ "${APK_NAME}" =~ ^tachiyomi-zh\.jmapi-v[0-9]+(\.[0-9]+)+\.apk$ ]] || \
+             [ "$(basename -- "${APK_NAME}")" != "${APK_NAME}" ]; then
+            echo "Unsafe APK filename derived from version: '${APK_NAME}'." >&2
+            exit 1
+          fi
           PACKAGE_NAME="eu.kanade.tachiyomi.extension.zh.jmapi"
+          mkdir -p dist/apk dist/icon
+          APK_FINAL="dist/apk/${APK_NAME}"
+          cp "${APK_SOURCE}" "${APK_FINAL}"
+          AAPT2="$(find "${ANDROID_HOME}/build-tools" -type f -name aapt2 | sort -V | tail -n 1)"
+          if [ -z "${AAPT2}" ]; then
+            echo "Android build-tools aapt2 was not found; APK manifest identity cannot be verified." >&2
+            exit 1
+          fi
+          PACKAGE_LINE="$("${AAPT2}" dump badging "${APK_FINAL}" | grep -E '^package: ' | head -n 1)"
+          MANIFEST_PACKAGE="$(sed -n "s/.* name='\([^']*\)'.*/\1/p" <<< "${PACKAGE_LINE}")"
+          MANIFEST_VERSION_CODE="$(sed -n "s/.* versionCode='\([^']*\)'.*/\1/p" <<< "${PACKAGE_LINE}")"
+          MANIFEST_VERSION_NAME="$(sed -n "s/.* versionName='\([^']*\)'.*/\1/p" <<< "${PACKAGE_LINE}")"
+          if [ "${MANIFEST_PACKAGE}" != "${PACKAGE_NAME}" ] || \
+             [ "${MANIFEST_VERSION_CODE}" != "${VERSION_CODE}" ] || \
+             [ "${MANIFEST_VERSION_NAME}" != "${VERSION}" ]; then
+            echo "APK manifest identity does not match build.gradle.kts." >&2
+            echo "Expected ${PACKAGE_NAME} ${VERSION_CODE} ${VERSION}; got ${MANIFEST_PACKAGE} ${MANIFEST_VERSION_CODE} ${MANIFEST_VERSION_NAME}." >&2
+            exit 1
+          fi
           SOURCE_ID="$(python3 - <<'PY'
           import hashlib
 
@@ -117,17 +150,15 @@ jobs:
           PY
           )"
           APKSIGNER="$(find "${ANDROID_HOME}/build-tools" -name apksigner | sort -V | tail -n 1)"
-          FINGERPRINT="$("${APKSIGNER}" verify --print-certs "${APK_SOURCE}" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/ { gsub(":", "", $2); print tolower($2); exit }')"
+          FINGERPRINT="$("${APKSIGNER}" verify --print-certs "${APK_FINAL}" | awk -F': ' '/certificate SHA-256 digest:/ { fingerprint = $NF; gsub(":", "", fingerprint); print tolower(fingerprint); exit }')"
           if [ -z "${FINGERPRINT}" ]; then
-            FINGERPRINT="$(keytool -printcert -jarfile "${APK_SOURCE}" | awk '/SHA256:/ { gsub(":", "", $2); print tolower($2); exit }')"
+            FINGERPRINT="$(keytool -printcert -jarfile "${APK_FINAL}" | awk '/SHA256:/ { gsub(":", "", $2); print tolower($2); exit }')"
           fi
           if [ -z "${FINGERPRINT}" ]; then
             echo "Could not read APK signing certificate fingerprint." >&2
             exit 1
           fi
 
-          mkdir -p dist/apk dist/icon
-          cp "${APK_SOURCE}" "dist/apk/${APK_NAME}"
           cp src/zh/jmapi/res/mipmap-xxxhdpi/ic_launcher.png "dist/icon/${PACKAGE_NAME}.png"
           touch dist/.nojekyll
 
