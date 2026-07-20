@@ -442,6 +442,8 @@ Assert-Contains ".github/workflows/build-extension.yml" 'cp "\$\{APK_SOURCE\}" "
 Assert-Contains ".github/workflows/build-extension.yml" 'dump badging "\$\{APK_FINAL\}"[\s\S]*?verify --print-certs "\$\{APK_FINAL\}"'
 Assert-NotContains ".github/workflows/build-extension.yml" 'dump badging "\$\{APK_SOURCE\}"'
 Assert-NotContains ".github/workflows/build-extension.yml" 'verify --print-certs "\$\{APK_SOURCE\}"'
+Assert-Contains ".github/workflows/build-extension.yml" 'awk\s+-F'': ''\s+''/certificate SHA-256 digest:/\s+\{\s*fingerprint\s*=\s*\$NF;'
+Assert-NotContains ".github/workflows/build-extension.yml" '/Signer #1 certificate SHA-256 digest:/'
 
 Assert-Contains "README.md" 'Suwayomi'
 Assert-Contains "README.md" 'http://127.0.0.1:8088'
