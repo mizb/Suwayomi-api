@@ -2,7 +2,7 @@
 
 本文件是后续 AI 的执行边界。提示词只需要求 AI 完整读取并自主执行本文件；主要目标、契约和验收条件都在这里。
 
-当前检查点（2026-07-17）：`v1.4.15 / versionCode 15` 已完成真实构建、元数据和 Suwayomi 2.3.2243 升级回归；`v1.4.14 / 14` 的反代子路径页面 URL 丢失是 RED 历史基线。后续先读取 bug 排查审计、规范化页面 URL 设计与跨项目最终报告并核对哈希；不得把旧版宿主结果冒充为新 APK 结果。
+当前检查点（2026-07-17）：`v1.4.15 / versionCode 15` 已完成真实构建、元数据和 Suwayomi 2.3.2243 升级回归；配套 API 为 `2026.07.17.8`，其 retryable failure 按冻结的健康顺序 `A→B→C→D→E` 最多三轮。`v1.4.14 / 14` 的反代子路径页面 URL 丢失是 RED 历史基线。后续先读取 bug 排查审计、轮询设计、规范化页面 URL 设计与跨项目最终报告并核对哈希；不得把旧版宿主结果冒充为新 APK 结果。
 
 ## 角色与停止条件
 
@@ -114,7 +114,7 @@ Get-Content -Raw .\dist-local\repo.json | ConvertFrom-Json | Out-Null
 - `v1.4.15` 的 Suwayomi 回归已经完成，证据覆盖中文筛选/设置、Popular、Latest、空/标题/ID 搜索、详情、章节、阅读、反代子路径和预取双向切换。除非 APK、设置或宿主版本变化，不重复执行。
 - 写入 `D:\jm\jmcomic-api-main\docs\performance-delivery-report.md`，包含文件、行为、完整测试摘要、性能数据、部署/回滚命令、未执行项和剩余风险。
 
-当前机器 Docker 不可用，但 `v1.4.15` 的本机 Suwayomi 回归、API `.2` 当前哈希 A/B 和 after-only 深度证据均已完成。先部署并现场复验 `.2` 的 Latest 502；Docker-capable 主机到位后执行 compose 多 worker/runtime/fault 验收。历史 `.1`/`.13.2` 证据不得与 `.2` 混用；生产密钥未提供时保留为发布治理待办。
+当前机器 Docker 不可用，但 `v1.4.15` 的本机 Suwayomi 回归、API `.2` 历史同条件 A/B 和 after-only 深度证据均已完成。先强制重建并现场复验 `.8` 的 Latest、同一章节及同 request-id 的 round-major 域名顺序；Docker-capable 主机到位后执行 compose 多 worker/runtime/fault 验收。历史 `.1`/`.13.2`/`.2` 性能证据不得改标为 `.8`；生产密钥未提供时保留为发布治理待办。
 
 ## 交付输出
 
@@ -132,5 +132,5 @@ Get-Content -Raw .\dist-local\repo.json | ConvertFrom-Json | Out-Null
 ## 给 AI 的简短启动提示词
 
 ```text
-完整读取并严格执行 D:\jm\jmapi-extension\docs\ai-delivery-prompt.md；先核对规范化页面 URL 设计、bug 排查审计、最终报告和当前哈希，保持 v1.4.15/15 与 API 2026.07.17.7 一致，自主完成所有具备条件的验证和交付。失败必须根因诊断、最小修复、相关复测；不得改变固定筛选/API/章节/缓存契约，不得把 v1.4.14 的缺陷复现冒充为新 APK 通过结果，也不得伪造 Git、BEFORE 或性能百分比。
+完整读取并严格执行 D:\jm\jmapi-extension\docs\ai-delivery-prompt.md；先核对规范化页面 URL 设计、bug 排查审计、最终报告和当前哈希，保持 v1.4.15/15 与 API 2026.07.17.8 一致，自主完成所有具备条件的验证和交付。失败必须根因诊断、最小修复、相关复测；不得改变固定筛选/API/章节/缓存契约，不得把 v1.4.14 的缺陷复现冒充为新 APK 通过结果，也不得伪造 Git、BEFORE 或性能百分比。
 ```
